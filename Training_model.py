@@ -371,7 +371,7 @@ def plot_pred_obs(nn_params, nn2_params, inp, obs, del_lens, nms, datatype, lett
 # Setup / Run Main
 ##
 if __name__ == '__main__':
-  out_place = '/cluster/mshen/prj/mmej_figures/out/%s/' % (NAME)
+  out_place = './output'
   util.ensure_dir_exists(out_place)
   num_folds = count_num_folders(out_place)
   out_letters = alphabetize(num_folds + 1)
@@ -396,11 +396,8 @@ if __name__ == '__main__':
   nn2_layer_sizes = [1, 16, 16, 1]
 
   print_and_log("Loading data...", log_fn)
-  inp_dir = '/cluster/mshen/prj/mmej_figures/out/c2_model_dataset/'
-  # master_data = pickle.load(open(inp_dir + 'dataset_try1.pkl'))
-  # master_data = pickle.load(open(inp_dir + 'dataset_try2.pkl'))
-  # master_data = pickle.load(open(inp_dir + 'dataset_try3.pkl'))
-  master_data = pickle.load(open(inp_dir + 'dataset_try4.pkl'))
+  inp_dir = './input/'
+  counts, del_features = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
 
   '''
   Unpack data from e11_dataset
@@ -446,7 +443,7 @@ if __name__ == '__main__':
     idx = batch_indices(iter)
     return main_objective(nn_params, nn2_params, INP_train, OBS_train, OBS2_train, DEL_LENS_train, batch_size, seed)
 
-  both_objective_grad = multigrad(objective, argnums=[0,1])
+  both_objective_grad = multigrad_dict(objective, argnums=[0,1])
 
   def print_perf(nn_params, nn2_params, iter):
     print_and_log(str(iter), log_fn)
