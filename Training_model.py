@@ -406,17 +406,38 @@ if __name__ == '__main__':
   counts = master_data['counts'].drop('fraction', axis=1)
   # del_features: contains a dataframe detailing the deletion length, homology length, and homology GC content, for each deletion-type repair outcome for every target sequence.
   del_features = master_data['del_features']
+  # merged counts and del_features
+  data = pd.concat((counts[counts['Type'] == 'DELETION'], del_features), axis=1).reset_index()
 
-# TODO : Implement the data parsing function
-def parseInputData(counts, del_features):
-  pass
+  # TODO : Implement the data parsing function
+  def parse_input_data(data):
+    exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
+
+    # STEP 1: get exps
+    exps = data['Sample_Name'].unique()
+
+    for exp in exps:
+      exp_data = data[data['Sample_Name'] == exp]
+
+      # STEP 2 (WIP): get dl_freqs
+      total_count_events = sum(exp_data['countEvents'])
+      exp_data['countEvents'] = exp_data['countEvents'].div(total_count_events)
+      exp_del_freqs = []
+      for del_len in range(1, 28+1):
+        dl_freq = sum(exp_data[exp_data['Size'] == del_len]['countEvents'])
+        exp_del_freqs.append(dl_freq)
+
+      dl_freqs.append(exp_del_freqs)
+
+    return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
 
 
   '''
   Unpack data from e11_dataset
   '''
 
-  [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = master_data
+  [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
+  print(dl_freqs)
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
     inp_point = np.array([mhl, gcf]).T   # N * 2
