@@ -15,9 +15,9 @@ import sys, string, pickle, subprocess, os, datetime
 from mylib import util
 import seaborn as sns, pandas as pd
 from matplotlib.colors import Normalize
-# from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score
 from scipy.stats import pearsonr
-# from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
 from matplotlib.backends.backend_pdf import PdfPages 
 import matplotlib.patches as mpatches
 NAME = util.get_fn(__file__)
