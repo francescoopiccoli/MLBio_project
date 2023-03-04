@@ -398,13 +398,24 @@ if __name__ == '__main__':
 
   print_and_log("Loading data...", log_fn)
   inp_dir = './input/'
-  counts, del_features = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
-  print(type(counts))
-  print(type(del_features))
+
+  # A pickle file containing a dict object with two keys: counts and del_features.
+  # The guide names are in the format <guide_id>_<guide sequence>. The guide sequence can be extracted from this id and used to determine the -3, -4 and -5 nucleotides for the kNN insertion model and insertion-type repair outcomes.
+  master_data = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
+  # counts: Contains a dataframe detailing the observed counts for each repair outcome (insertions and deletions) for every target sequence. The “fraction” column can be ignored.
+  counts = master_data['counts'].drop('fraction', axis=1)
+  # del_features: contains a dataframe detailing the deletion length, homology length, and homology GC content, for each deletion-type repair outcome for every target sequence.
+  del_features = master_data['del_features']
+
+# TODO : Implement the data parsing function
+def parseInputData(counts, del_features):
+  pass
+
+
   '''
   Unpack data from e11_dataset
   '''
-  # TODO : Handle the reading of the data and find out how to compute all these variables from 'counts' and 'del_features'
+
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = master_data
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
