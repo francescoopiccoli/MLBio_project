@@ -196,6 +196,7 @@ def count_num_folders(out_dir):
     assert os.path.isdir(out_dir + fold), 'Not a folder!'
   return len(os.listdir(out_dir))
 
+  # TODO : Fix this
 def copy_script(out_dir):
   src_dir = '/cluster/mshen/prj/mmej_figures/src/'
   script_nm = __file__
@@ -398,7 +399,8 @@ if __name__ == '__main__':
   print_and_log("Loading data...", log_fn)
   inp_dir = './input/'
   counts, del_features = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
-
+  print(type(counts))
+  print(type(del_features))
   '''
   Unpack data from e11_dataset
   '''
