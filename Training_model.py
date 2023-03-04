@@ -405,6 +405,7 @@ if __name__ == '__main__':
   '''
   Unpack data from e11_dataset
   '''
+  # TODO : Handle the reading of the data and find out how to compute all these variables from 'counts' and 'del_features'
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = master_data
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
