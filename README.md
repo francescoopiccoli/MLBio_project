@@ -1,9 +1,11 @@
-Francesco Piccoli (ID: 5848474)
-
-... (ID: ...) 
-
 # Machine Learning in Bioinformatics (CS4260) Project 
 
+## Authors
+
+Francesco Piccoli (ID: 5848474)
+Boriss Bērmans (ID: 4918673)
+
+... (ID: ...) 
 
 ## User Manual
 
