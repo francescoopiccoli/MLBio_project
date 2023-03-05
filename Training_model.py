@@ -369,6 +369,25 @@ def plot_pred_obs(nn_params, nn2_params, inp, obs, del_lens, nms, datatype, lett
   return
 
 
+def parse_input_data(data):
+  # We care about deletions (MH and MH-less) for the neural networks.
+  deletions_data = data[data['Type'] == 'DELETION'].reset_index()
+  exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))  
+  # STEP 1: get exps
+  # Get a list of all target sites.
+  exps = [raw_target_site.split('_')[-1] for raw_target_site in deletions_data['Sample_Name'].values]
+  mh_lens = deletions_data['homologyLength'].values
+  gc_fracs = deletions_data['homologyGCContent'].values
+  del_lens = deletions_data['Size'].values
+  freqs = deletions_data['countEvents'].values
+  del_freqs_per_length = deletions_data[['Size', 'countEvents']].groupby('Size')['countEvents'].sum()
+  total_deletions = sum(del_freqs_per_length)
+  # normalized deletion frequencies
+  dl_freqs = del_freqs_per_length / total_deletions
+  dl_freqs = [dl_freqs.loc[size] for size in deletions_data['Size']]
+
+  return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
+
 
 ##
 # Setup / Run Main
@@ -409,37 +428,9 @@ if __name__ == '__main__':
   # del_features: contains a dataframe detailing the deletion length, homology length, and homology GC content, for each deletion-type repair outcome for every target sequence.
   del_features = master_data['del_features']
   # merged counts and del_features
-  data = pd.concat((counts[counts['Type'] == 'DELETION'], del_features), axis=1).reset_index()
-
-  # TODO : Implement the data parsing function
-  def parse_input_data(data):
-    exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
-
-    # STEP 1: get exps
-    exps = data['Sample_Name'].unique()
-
-    for exp in exps:
-      exp_data = data[data['Sample_Name'] == exp]
-
-      # STEP 2 (WIP): get dl_freqs
-      total_count_events = sum(exp_data['countEvents'])
-      exp_data['countEvents'] = exp_data['countEvents'].div(total_count_events)
-      exp_del_freqs = []
-      for del_len in range(1, 28+1):
-        dl_freq = sum(exp_data[exp_data['Size'] == del_len]['countEvents'])
-        exp_del_freqs.append(dl_freq)
-
-      dl_freqs.append(exp_del_freqs)
-
-    return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
-
-
-  '''
-  Unpack data from e11_dataset
-  '''
-
+  data = pd.concat((counts, del_features), axis=1)
+  # Unpack data from e11_dataset
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
-  print(dl_freqs)
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
     inp_point = np.array([mhl, gcf]).T   # N * 2
