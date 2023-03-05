@@ -5,7 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function
 import autograd.numpy as np
 import autograd.numpy.random as npr
-from autograd.differential_operators import multigrad_dict, grad
+from autograd.differential_operators import grad
 from autograd.misc import flatten
 import matplotlib
 matplotlib.use('Pdf')
@@ -273,18 +273,18 @@ def rsq(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
 def save_rsq_params_csv(nms, rsqs, nn2_params, out_dir, iter_nm, data_type):
   with open(out_dir + iter_nm + '_' + data_type + '_rsqs_params.csv', 'w') as f:
     f.write( ','.join(['Exp', 'Rsq']) + '\n')
-    for i in xrange(len(nms)):
+    for i in range(len(nms)):
       f.write( ','.join([nms[i], str(rsqs[i])]) + '\n' )
   return
 
 def save_train_test_names(train_nms, test_nms, out_dir):
   with open(out_dir + 'train_exps.csv', 'w') as f:
     f.write( ','.join(['Exp']) + '\n')
-    for i in xrange(len(train_nms)):
+    for i in range(len(train_nms)):
       f.write( ','.join([train_nms[i]]) + '\n' )
   with open(out_dir + 'test_exps.csv', 'w') as f:
     f.write( ','.join(['Exp']) + '\n')
-    for i in xrange(len(test_nms)):
+    for i in range(len(test_nms)):
       f.write( ','.join([test_nms[i]]) + '\n' )
   return
 
@@ -477,7 +477,7 @@ if __name__ == '__main__':
     idx = batch_indices(iter)
     return main_objective(nn_params, nn2_params, INP_train, OBS_train, OBS2_train, DEL_LENS_train, batch_size, seed)
 
-  both_objective_grad = multigrad_dict(objective, argnums=[0,1])
+  both_objective_grad = grad(objective, argnums=[0,1])
 
   def print_perf(nn_params, nn2_params, iter):
     print_and_log(str(iter), log_fn)
