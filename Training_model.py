@@ -7,6 +7,7 @@ import autograd.numpy as np
 import autograd.numpy.random as npr
 from autograd.differential_operators import multigrad_dict, grad
 from autograd.misc import flatten
+from past.builtins import xrange 
 import matplotlib
 matplotlib.use('Pdf')
 import matplotlib.pyplot as plt
