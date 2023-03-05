@@ -28,6 +28,7 @@ def sigmoid(x):    return 0.5 * (np.tanh(x) + 1.0)
 def logsigmoid(x): return x - np.logaddexp(0, x)
 def leaky_relu(x): return np.maximum(0, x) + np.minimum(0, x) * 0.001
 
+# Initialize random paramaters for the neural networks
 def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
   """Build a list of (weights, biases) tuples,
      one for each layer in the net."""
@@ -35,10 +36,12 @@ def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
            scale * rs.randn(n))      # bias vector
           for m, n in zip(layer_sizes[:-1], layer_sizes[1:])]
 
+# Batch normalize each nn layer output to speed up training. (not used)
 def batch_normalize(activations):
   mbmean = np.mean(activations, axis=0, keepdims=True)
   return (activations - mbmean) / (np.std(activations, axis=0, keepdims=True) + 1)
 
+# Do forward step (ie compute ouput from input) in the neural network.
 def nn_match_score_function(params, inputs):
   # """Params is a list of (weights, bias) tuples.
   #    inputs is an (N x D) matrix."""
@@ -56,9 +59,7 @@ def nn_match_score_function(params, inputs):
   outputs = np.dot(inputs, outW) + outb
   return outputs.flatten()
 
-##
-# Objective
-##
+# Compute loss. 
 def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
   LOSS = 0
   for idx in range(len(inp)):
@@ -140,6 +141,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
 ##
 
 
+# Backpropagation step.
 ##
 # ADAM Optimizer
 ##
