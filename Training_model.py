@@ -470,7 +470,7 @@ if __name__ == '__main__':
     idx = batch_indices(iter)
     return main_objective(nn_params, nn2_params, INP_train, OBS_train, OBS2_train, DEL_LENS_train, batch_size, seed)
 
-  both_objective_grad = grad(objective, argnums=[0,1])
+  both_objective_grad = grad(objective, argnum=[0,1])
 
   def print_perf(nn_params, nn2_params, iter):
     print_and_log(str(iter), log_fn)
