@@ -374,20 +374,32 @@ def parse_input_data(data):
   deletions_data = data[data['Type'] == 'DELETION'].reset_index()
   exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))  
   # STEP 1: get exps
-  # Get a list of all target sites.
-  exps = [raw_target_site.split('_')[-1] for raw_target_site in deletions_data['Sample_Name'].values]
-  mh_lens = deletions_data['homologyLength'].values
-  gc_fracs = deletions_data['homologyGCContent'].values
-  del_lens = deletions_data['Size'].values
-  freqs = deletions_data['countEvents'].values
-  del_freqs_per_length = deletions_data[['Size', 'countEvents']].groupby('Size')['countEvents'].sum()
-  total_deletions = sum(del_freqs_per_length)
-  # normalized deletion frequencies
-  dl_freqs = del_freqs_per_length / total_deletions
-  dl_freqs = [dl_freqs.loc[size] for size in deletions_data['Size']]
+
+  # To make this run in a short time, take only the first n elements (i.e. [:n])
+  exps = deletions_data['Sample_Name'].unique()
+  mh_data = deletions_data[deletions_data['homologyLength'] != 0]
+
+  for exp in exps:
+    mh_exp_data = mh_data[mh_data['Sample_Name'] == exp]
+
+    # These next 4 paramaters are related just to the mh deletions (see featurize function in c2_model_dataset.py)
+    mh_lens.append(mh_exp_data['homologyLength'])
+    gc_fracs.append(mh_exp_data['homologyGCContent'])
+    del_lens.append(mh_exp_data['Size'])
+    total_count_events = sum(mh_exp_data['countEvents'])
+    freqs.append(mh_exp_data['countEvents'].div(total_count_events))
+
+    exp_del_freqs = []
+    exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
+    dl_freq_data = exp_data[exp_data['Size'] <= 28]
+    for del_len in range(1, 28+1):
+      dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents'])
+      exp_del_freqs.append(dl_freq)
+
+    dl_freqs.append(exp_del_freqs)
 
   return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
-
+  
 
 ##
 # Setup / Run Main
