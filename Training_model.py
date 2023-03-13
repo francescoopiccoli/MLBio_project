@@ -115,13 +115,18 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
   # hence from the microhomology scores we can get the frequency distribution for the deletion genotype 
     
     # Pearson correlation squared loss
-    # Take the average frequency of each microhomology 
+    # Take the mean predicted frequency of all deletion genotype for that target site.   
     x_mean = np.mean(normalized_fq)
+    # Take the mean observed frequency of all deletion genotype for that target site.   
     y_mean = np.mean(obs[idx])
+    # Compute covariance between the two random variables (i.e. frequency observed and frequency predicted)
     pearson_numerator = np.sum((normalized_fq - x_mean)*(obs[idx] - y_mean))
+    # compute standard deviation of the frequency predicted RV
     pearson_denom_x = np.sqrt(np.sum((normalized_fq - x_mean)**2))
+    # compute standard deviation of the frequency observed RV
     pearson_denom_y = np.sqrt(np.sum((obs[idx] - y_mean)**2))
     pearson_denom = pearson_denom_x * pearson_denom_y
+    # r squared: pearson correlation squared 
     rsq = (pearson_numerator/pearson_denom)**2
     neg_rsq = rsq * -1
     LOSS += neg_rsq
@@ -141,24 +146,37 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     unnormalized_nn2 = np.exp(nn2_scores - 0.25*np.arange(1, 28+1))
 
     # iterate through del_lens vector, adding mh_scores (already computed above) to the correct index
+    # Create an array/vector of 28 entries, each for each deletion length considered.
     mh_contribution = np.zeros(28,)
+    # Js contains all the deletion lengths for that target site ie CTTTCACTTTATAGATTTAT,
+    # it's gonna have as many rows as the n of entries related to CTTTCACTTTATAGATTTAT
+    # in the del_features dataset.
+    # so we go over all those deletion lengths 
     for jdx in range(len(Js)):
+      # Take the deletion length for the current iteration
       dl = Js[jdx]
       if dl > 28:
         break
+      # Line 877-878 of the supplementary methods pdf.
       mhs = np.exp(mh_scores[jdx] - 0.25*dl)
       mask = np.concatenate([np.zeros(dl - 1,), np.ones(1, ) * mhs, np.zeros(28 - (dl - 1) - 1,)])
       mh_contribution = mh_contribution + mask
+    # sum mh and mhless scores as specified in line 877 and 878 of of the supplementary methods pdf.
     unnormalized_nn2 = unnormalized_nn2 + mh_contribution
+    # Compute the frequency for each deletion length by normalizing in order for all the frequencies to sum up to 1.
     normalized_fq = np.divide(unnormalized_nn2, np.sum(unnormalized_nn2))
 
     # Pearson correlation squared loss
+    # Again compute the pearson correlation between the 2 random variables:
+    # predicted deletion frequency for each deletion length
+    # observed deletion frequency for each deletion length
     x_mean = np.mean(normalized_fq)
     y_mean = np.mean(obs2[idx])
     pearson_numerator = np.sum((normalized_fq - x_mean)*(obs2[idx] - y_mean))
     pearson_denom_x = np.sqrt(np.sum((normalized_fq - x_mean)**2))
     pearson_denom_y = np.sqrt(np.sum((obs2[idx] - y_mean)**2))
     pearson_denom = pearson_denom_x * pearson_denom_y
+    # squared pearson correlation
     rsq = (pearson_numerator/pearson_denom)**2
     neg_rsq = rsq * -1
     LOSS += neg_rsq
