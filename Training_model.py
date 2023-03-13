@@ -434,16 +434,8 @@ def parse_input_data(data):
 
     # These next 4 paramaters are related just to the mh deletions (see featurize function in c2_model_dataset.py)
     mh_lens.append(mh_exp_data['homologyLength'])
-    print(mh_exp_data['homologyLength'])
-    print(len(mh_exp_data['homologyLength']))
     gc_fracs.append(mh_exp_data['homologyGCContent'])
-    print(len(mh_exp_data['homologyGCContent']))
-    print(mh_exp_data['homologyGCContent'])
     del_lens.append(mh_exp_data['Size'].astype('int'))
-    print("!!!!")
-    print(del_lens[0])
-    print(len(mh_exp_data['Size']))
-    print(mh_exp_data['Size'])
 
     # Freqs determine how frequent microhomology deletions are for the given target site
     # We also need to normalize count events
