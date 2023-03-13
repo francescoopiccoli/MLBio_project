@@ -372,12 +372,13 @@ def plot_pred_obs(nn_params, nn2_params, inp, obs, del_lens, nms, datatype, lett
 def parse_input_data(data):
   # We care about deletions (MH and MH-less) for the neural networks.
   deletions_data = data[data['Type'] == 'DELETION'].reset_index()
-  exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))  
-  # STEP 1: get exps
+  exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6)) 
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
   exps = deletions_data['Sample_Name'].unique()
-  mh_data = deletions_data[deletions_data['homologyLength'] != 0]
+
+  # TODO: compute these correctly
+  mh_data = deletions_data
 
   for exp in exps:
     mh_exp_data = mh_data[mh_data['Sample_Name'] == exp]
@@ -386,17 +387,21 @@ def parse_input_data(data):
     mh_lens.append(mh_exp_data['homologyLength'])
     gc_fracs.append(mh_exp_data['homologyGCContent'])
     del_lens.append(mh_exp_data['Size'])
+
+    # Normalize count events
     total_count_events = sum(mh_exp_data['countEvents'])
     freqs.append(mh_exp_data['countEvents'].div(total_count_events))
 
-    exp_del_freqs = []
-    exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
-    dl_freq_data = exp_data[exp_data['Size'] <= 28]
-    for del_len in range(1, 28+1):
-      dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents'])
-      exp_del_freqs.append(dl_freq)
+    # TODO: Compute deletion lengths
+    # 
+    # exp_del_freqs = []
+    # exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
+    # dl_freq_data = exp_data[exp_data['Size'] <= 28]
+    # for del_len in range(1, 28+1):
+    #   dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents'])
+    #   exp_del_freqs.append(dl_freq)
 
-    dl_freqs.append(exp_del_freqs)
+    # dl_freqs.append(exp_del_freqs)
 
   return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
   
