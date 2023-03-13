@@ -264,8 +264,8 @@ def print_and_log(text, log_fn):
 # Plotting and Writing
 ##
 def save_parameters(nn_params, nn2_params, out_dir_params, letters):
-  pickle.dump(nn_params, open(out_dir_params + letters + '_nn.pkl', 'w'))
-  pickle.dump(nn2_params, open(out_dir_params + letters + '_nn2.pkl', 'w'))
+  pickle.dump(nn_params, open(out_dir_params + letters + '_nn.pkl', 'wb'))
+  pickle.dump(nn2_params, open(out_dir_params + letters + '_nn2.pkl', 'wb'))
   return
 
 def rsq(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
@@ -424,7 +424,7 @@ def parse_input_data(data):
   exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6)) 
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = deletions_data['Sample_Name'].unique()
+  exps = deletions_data['Sample_Name'].unique()[:10]
 
   # Microhomology data has the homology length greater than 0
   mh_data = deletions_data[deletions_data['homologyLength'] != 0]
@@ -434,12 +434,22 @@ def parse_input_data(data):
 
     # These next 4 paramaters are related just to the mh deletions (see featurize function in c2_model_dataset.py)
     mh_lens.append(mh_exp_data['homologyLength'])
+    print(mh_exp_data['homologyLength'])
+    print(len(mh_exp_data['homologyLength']))
     gc_fracs.append(mh_exp_data['homologyGCContent'])
-    del_lens.append(mh_exp_data['Size'])
-    
+    print(len(mh_exp_data['homologyGCContent']))
+    print(mh_exp_data['homologyGCContent'])
+    del_lens.append(mh_exp_data['Size'].astype('int'))
+    print("!!!!")
+    print(del_lens[0])
+    print(len(mh_exp_data['Size']))
+    print(mh_exp_data['Size'])
+
     # Freqs determine how frequent microhomology deletions are for the given target site
     # We also need to normalize count events
     total_count_events = sum(mh_exp_data['countEvents'])
+    # how frequent each deletion genotype (which is associated with a particular microhomology)
+    # we get fromt the data is, normalized in order to sum to 1. 
     freqs.append(mh_exp_data['countEvents'].div(total_count_events))
 
     # compute how frequent each deletion length is for the given target site
