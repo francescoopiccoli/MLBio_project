@@ -5,7 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function
 import autograd.numpy as np
 import autograd.numpy.random as npr
-from autograd.differential_operators import multigrad_dict, grad
+from autograd.differential_operators import grad
 from autograd.misc import flatten
 from past.builtins import xrange 
 import matplotlib
@@ -29,6 +29,7 @@ def sigmoid(x):    return 0.5 * (np.tanh(x) + 1.0)
 def logsigmoid(x): return x - np.logaddexp(0, x)
 def leaky_relu(x): return np.maximum(0, x) + np.minimum(0, x) * 0.001
 
+# Initialize random paramaters for the neural networks
 def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
   """Build a list of (weights, biases) tuples,
      one for each layer in the net."""
@@ -36,10 +37,12 @@ def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
            scale * rs.randn(n))      # bias vector
           for m, n in zip(layer_sizes[:-1], layer_sizes[1:])]
 
+# Batch normalize each nn layer output to speed up training. (not used)
 def batch_normalize(activations):
   mbmean = np.mean(activations, axis=0, keepdims=True)
   return (activations - mbmean) / (np.std(activations, axis=0, keepdims=True) + 1)
 
+# Do forward step (ie compute ouput from input) in the neural network.
 def nn_match_score_function(params, inputs):
   # """Params is a list of (weights, bias) tuples.
   #    inputs is an (N x D) matrix."""
@@ -57,33 +60,47 @@ def nn_match_score_function(params, inputs):
   outputs = np.dot(inputs, outW) + outb
   return outputs.flatten()
 
-##
-# Objective
-##
+# Compute loss. 
 def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
   LOSS = 0
+  # iterate over all target site:  : [
+  # [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]]
   for idx in range(len(inp)):
 
     ##
     # MH-based deletion frequencies
-    ##
+    # inp[idx]:  [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]
+    # Compute all the psi scores. 
     mh_scores = nn_match_score_function(nn_params, inp[idx])
+    # take all the deletion lenghts corresponding to that target site CTTTCACTTTATAGATTTAT
     Js = np.array(del_lens[idx])
+    # compute the phi scores from psi scores penalizing on the deletion length Js.
     unnormalized_fq = np.exp(mh_scores - 0.25*Js)
     
     # Add MH-less contribution at full MH deletion lengths
-    mh_vector = inp[idx].T[0]
+    mh_vector = inp[idx].T[0] # [CTTTCACTTTATAGATTTAT_mhls] ie array containg all microhomology length for the current target site we are considering
     mhfull_contribution = np.zeros(mh_vector.shape)
+    # Go over all the microhomology lengths for that target site ie CTTTCACTTTATAGATTTAT
     for jdx in range(len(mh_vector)):
+      # this bit is explained at line 866 of the supplementary methods pdf.
+      # if it is a full microhomology, namely, if the deletion length is equal to the homology length.
       if del_lens[idx][jdx] == mh_vector[jdx]:
+        #dl = deletion length for that particular instance/row of the dataset for that target site
         dl = del_lens[idx][jdx]
+        # Compute the mhless score for that deletion length using the 2nd neural network
         mhless_score = nn_match_score_function(nn2_params, np.array(dl))
+        # add penalization on deletion length again.
         mhless_score = np.exp(mhless_score - 0.25*dl)
         mask = np.concatenate([np.zeros(jdx,), np.ones(1,) * mhless_score, np.zeros(len(mh_vector) - jdx - 1,)])
         mhfull_contribution = mhfull_contribution + mask
+    # Line 866 of the supplementary methods pdf.
     unnormalized_fq = unnormalized_fq + mhfull_contribution
+    # Line 871 of the supplementary methods pdf.
     normalized_fq = np.divide(unnormalized_fq, np.sum(unnormalized_fq))
 
+  # each target site can have multiple/diverse microhomology, each microhomology corresponds to
+  # a particular deletion genotype so from the score of the microhomology we can get to the likelihood/frequency of its particular deletion genotype
+  # hence from the microhomology scores we can get the frequency distribution for the deletion genotype 
     # Pearson correlation squared loss
     x_mean = np.mean(normalized_fq)
     y_mean = np.mean(obs[idx])
@@ -141,6 +158,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
 ##
 
 
+# Backpropagation step.
 ##
 # ADAM Optimizer
 ##
@@ -274,18 +292,18 @@ def rsq(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
 def save_rsq_params_csv(nms, rsqs, nn2_params, out_dir, iter_nm, data_type):
   with open(out_dir + iter_nm + '_' + data_type + '_rsqs_params.csv', 'w') as f:
     f.write( ','.join(['Exp', 'Rsq']) + '\n')
-    for i in xrange(len(nms)):
+    for i in range(len(nms)):
       f.write( ','.join([nms[i], str(rsqs[i])]) + '\n' )
   return
 
 def save_train_test_names(train_nms, test_nms, out_dir):
   with open(out_dir + 'train_exps.csv', 'w') as f:
     f.write( ','.join(['Exp']) + '\n')
-    for i in xrange(len(train_nms)):
+    for i in range(len(train_nms)):
       f.write( ','.join([train_nms[i]]) + '\n' )
   with open(out_dir + 'test_exps.csv', 'w') as f:
     f.write( ','.join(['Exp']) + '\n')
-    for i in xrange(len(test_nms)):
+    for i in range(len(test_nms)):
       f.write( ','.join([test_nms[i]]) + '\n' )
   return
 
@@ -368,6 +386,40 @@ def plot_pred_obs(nn_params, nn2_params, inp, obs, del_lens, nms, datatype, lett
   return
 
 
+def parse_input_data(data):
+  # We care about deletions (MH and MH-less) for the neural networks.
+  deletions_data = data[data['Type'] == 'DELETION'].reset_index()
+  exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6)) 
+
+  # To make this run in a short time, take only the first n elements (i.e. [:n])
+  exps = deletions_data['Sample_Name'].unique()
+
+  # TODO: compute these correctly
+  mh_data = deletions_data
+
+  for exp in exps:
+    mh_exp_data = mh_data[mh_data['Sample_Name'] == exp]
+
+    # These next 4 paramaters are related just to the mh deletions (see featurize function in c2_model_dataset.py)
+    mh_lens.append(mh_exp_data['homologyLength'])
+    gc_fracs.append(mh_exp_data['homologyGCContent'])
+    del_lens.append(mh_exp_data['Size'])
+    # how frequent microhomology deletions are for the given target site
+    # Normalize count events
+    total_count_events = sum(mh_exp_data['countEvents'])
+    freqs.append(mh_exp_data['countEvents'].div(total_count_events))
+    # compute how frequent each deletion length is for the given target site
+    #  # both for microhomology and non microhomology deletion.
+    # exp_del_freqs = []
+    # exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
+    # dl_freq_data = exp_data[exp_data['Size'] <= 28]
+    # for del_len in range(1, 28+1):
+    #   dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents'])
+    #   exp_del_freqs.append(dl_freq)
+    # dl_freqs.append(exp_del_freqs)
+
+  return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
+  
 
 ##
 # Setup / Run Main
@@ -408,39 +460,17 @@ if __name__ == '__main__':
   # del_features: contains a dataframe detailing the deletion length, homology length, and homology GC content, for each deletion-type repair outcome for every target sequence.
   del_features = master_data['del_features']
   # merged counts and del_features
-  data = pd.concat((counts[counts['Type'] == 'DELETION'], del_features), axis=1).reset_index()
-
-  # TODO : Implement the data parsing function
-  def parse_input_data(data):
-    exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
-
-    # STEP 1: get exps
-    exps = data['Sample_Name'].unique()
-
-    for exp in exps:
-      exp_data = data[data['Sample_Name'] == exp]
-
-      # STEP 2 (WIP): get dl_freqs
-      total_count_events = sum(exp_data['countEvents'])
-      exp_data['countEvents'] = exp_data['countEvents'].div(total_count_events)
-      exp_del_freqs = []
-      for del_len in range(1, 28+1):
-        dl_freq = sum(exp_data[exp_data['Size'] == del_len]['countEvents'])
-        exp_del_freqs.append(dl_freq)
-
-      dl_freqs.append(exp_del_freqs)
-
-    return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
-
-
-  '''
-  Unpack data from e11_dataset
-  '''
-
+  data = pd.concat((counts, del_features), axis=1)
+  # Unpack data from e11_dataset
+  # mh_lens contains as many entries as exps, each entry is an ARRAY containing all the 
+  # microhomology length in the dataset for that exp/target sequency, similarly 
+  # gc_frac is an array of arrays, each array entry regards a specific target sequence and the 
+  # relative GC conten observed. For the same target sequence we can observe different microhomologies
+  # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv  
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
-  print(dl_freqs)
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
+    #mhl and gcf are both arrays
     inp_point = np.array([mhl, gcf]).T   # N * 2
     INP.append(inp_point)
   INP = np.array(INP)   # 2000 * N * 2
@@ -478,7 +508,7 @@ if __name__ == '__main__':
     idx = batch_indices(iter)
     return main_objective(nn_params, nn2_params, INP_train, OBS_train, OBS2_train, DEL_LENS_train, batch_size, seed)
 
-  both_objective_grad = multigrad_dict(objective, argnums=[0,1])
+  both_objective_grad = grad(objective, argnum=[0,1])
 
   def print_perf(nn_params, nn2_params, iter):
     print_and_log(str(iter), log_fn)
