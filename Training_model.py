@@ -393,8 +393,8 @@ def parse_input_data(data):
   # To make this run in a short time, take only the first n elements (i.e. [:n])
   exps = deletions_data['Sample_Name'].unique()
 
-  # TODO: compute these correctly
-  mh_data = deletions_data
+  # Microhomology data has the homology length greater than 0
+  mh_data = deletions_data[deletions_data['homologyLength'] != 0]
 
   for exp in exps:
     mh_exp_data = mh_data[mh_data['Sample_Name'] == exp]
@@ -403,19 +403,21 @@ def parse_input_data(data):
     mh_lens.append(mh_exp_data['homologyLength'])
     gc_fracs.append(mh_exp_data['homologyGCContent'])
     del_lens.append(mh_exp_data['Size'])
-    # how frequent microhomology deletions are for the given target site
-    # Normalize count events
+    
+    # Freqs determine how frequent microhomology deletions are for the given target site
+    # We also need to normalize count events
     total_count_events = sum(mh_exp_data['countEvents'])
     freqs.append(mh_exp_data['countEvents'].div(total_count_events))
+
     # compute how frequent each deletion length is for the given target site
-    #  # both for microhomology and non microhomology deletion.
-    # exp_del_freqs = []
-    # exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
-    # dl_freq_data = exp_data[exp_data['Size'] <= 28]
-    # for del_len in range(1, 28+1):
-    #   dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents'])
-    #   exp_del_freqs.append(dl_freq)
-    # dl_freqs.append(exp_del_freqs)
+    # both for microhomology and non microhomology deletion.
+    exp_del_freqs = []
+    exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
+    dl_freq_data = exp_data[exp_data['Size'] <= 28]
+    for del_len in range(1, 28+1):
+      dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents'])
+      exp_del_freqs.append(dl_freq)
+    dl_freqs.append(exp_del_freqs)
 
   return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
   
