@@ -62,28 +62,44 @@ def nn_match_score_function(params, inputs):
 # Compute loss. 
 def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
   LOSS = 0
+  # iterate over all target site:  : [
+  # [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]]
   for idx in range(len(inp)):
 
     ##
     # MH-based deletion frequencies
-    ##
+    # inp[idx]:  [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]
+    # Compute all the psi scores. 
     mh_scores = nn_match_score_function(nn_params, inp[idx])
+    # take all the deletion lenghts corresponding to that target site CTTTCACTTTATAGATTTAT
     Js = np.array(del_lens[idx])
+    # compute the phi scores from psi scores penalizing on the deletion length Js.
     unnormalized_fq = np.exp(mh_scores - 0.25*Js)
     
     # Add MH-less contribution at full MH deletion lengths
-    mh_vector = inp[idx].T[0]
+    mh_vector = inp[idx].T[0] # [CTTTCACTTTATAGATTTAT_mhls] ie array containg all microhomology length for the current target site we are considering
     mhfull_contribution = np.zeros(mh_vector.shape)
+    # Go over all the microhomology lengths for that target site ie CTTTCACTTTATAGATTTAT
     for jdx in range(len(mh_vector)):
+      # this bit is explained at line 866 of the supplementary methods pdf.
+      # if it is a full microhomology, namely, if the deletion length is equal to the homology length.
       if del_lens[idx][jdx] == mh_vector[jdx]:
+        #dl = deletion length for that particular instance/row of the dataset for that target site
         dl = del_lens[idx][jdx]
+        # Compute the mhless score for that deletion length using the 2nd neural network
         mhless_score = nn_match_score_function(nn2_params, np.array(dl))
+        # add penalization on deletion length again.
         mhless_score = np.exp(mhless_score - 0.25*dl)
         mask = np.concatenate([np.zeros(jdx,), np.ones(1,) * mhless_score, np.zeros(len(mh_vector) - jdx - 1,)])
         mhfull_contribution = mhfull_contribution + mask
+    # Line 866 of the supplementary methods pdf.
     unnormalized_fq = unnormalized_fq + mhfull_contribution
+    # Line 871 of the supplementary methods pdf.
     normalized_fq = np.divide(unnormalized_fq, np.sum(unnormalized_fq))
 
+  # each target site can have multiple/diverse microhomology, each microhomology corresponds to
+  # a particular deletion genotype so from the score of the microhomology we can get to the likelihood/frequency of its particular deletion genotype
+  # hence from the microhomology scores we can get the frequency distribution for the deletion genotype 
     # Pearson correlation squared loss
     x_mean = np.mean(normalized_fq)
     y_mean = np.mean(obs[idx])
@@ -387,20 +403,18 @@ def parse_input_data(data):
     mh_lens.append(mh_exp_data['homologyLength'])
     gc_fracs.append(mh_exp_data['homologyGCContent'])
     del_lens.append(mh_exp_data['Size'])
-
+    # how frequent microhomology deletions are for the given target site
     # Normalize count events
     total_count_events = sum(mh_exp_data['countEvents'])
     freqs.append(mh_exp_data['countEvents'].div(total_count_events))
-
-    # TODO: Compute deletion lengths
-    # 
+    # compute how frequent each deletion length is for the given target site
+    #  # both for microhomology and non microhomology deletion.
     # exp_del_freqs = []
     # exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
     # dl_freq_data = exp_data[exp_data['Size'] <= 28]
     # for del_len in range(1, 28+1):
     #   dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents'])
     #   exp_del_freqs.append(dl_freq)
-
     # dl_freqs.append(exp_del_freqs)
 
   return [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs]
@@ -447,9 +461,15 @@ if __name__ == '__main__':
   # merged counts and del_features
   data = pd.concat((counts, del_features), axis=1)
   # Unpack data from e11_dataset
+  # mh_lens contains as many entries as exps, each entry is an ARRAY containing all the 
+  # microhomology length in the dataset for that exp/target sequency, similarly 
+  # gc_frac is an array of arrays, each array entry regards a specific target sequence and the 
+  # relative GC conten observed. For the same target sequence we can observe different microhomologies
+  # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv  
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
+    #mhl and gcf are both arrays
     inp_point = np.array([mhl, gcf]).T   # N * 2
     INP.append(inp_point)
   INP = np.array(INP)   # 2000 * N * 2
