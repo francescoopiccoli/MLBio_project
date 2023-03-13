@@ -79,6 +79,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     
     # Add MH-less contribution at full MH deletion lengths
     mh_vector = inp[idx].T[0] # [CTTTCACTTTATAGATTTAT_mhls] ie array containg all microhomology length for the current target site we are considering
+    # Create a vector containing as many entries as the n of rows for the current target site.
     mhfull_contribution = np.zeros(mh_vector.shape)
     # Go over all the microhomology lengths for that target site ie CTTTCACTTTATAGATTTAT
     for jdx in range(len(mh_vector)):
@@ -91,17 +92,30 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
         mhless_score = nn_match_score_function(nn2_params, np.array(dl))
         # add penalization on deletion length again.
         mhless_score = np.exp(mhless_score - 0.25*dl)
+        # mask is a vector of all zeros, except in the position where we are currently at, where
+        # the entry is gonna be the score from the 2nd neural network
+        #ie: for the 2nd row (which is a full microhomology: [0 1.2 0 0 0 0 0 0 0]
         mask = np.concatenate([np.zeros(jdx,), np.ones(1,) * mhless_score, np.zeros(len(mh_vector) - jdx - 1,)])
+        # then we sum those two vectors: here mhfull_contribution is all zeros,
+        # so the sum is gonna be equal to the mask again
         mhfull_contribution = mhfull_contribution + mask
     # Line 866 of the supplementary methods pdf.
+    # here we are actually summing the mh scores with the mhless scores for the full microhomology rows
+    # using the mhfull_contribution computed earlier using the mask.
+    # unnormalized_fq is gonna be an array/list/vector with a score for every microhomology
+    # with as many entries as the n of rows for that particular target site
     unnormalized_fq = unnormalized_fq + mhfull_contribution
     # Line 871 of the supplementary methods pdf.
+    # Here we are getting the actual genotype deletion frequency distribution 
+    # by normalizing all the scores in order for them to sum to 1.
     normalized_fq = np.divide(unnormalized_fq, np.sum(unnormalized_fq))
 
   # each target site can have multiple/diverse microhomology, each microhomology corresponds to
   # a particular deletion genotype so from the score of the microhomology we can get to the likelihood/frequency of its particular deletion genotype
   # hence from the microhomology scores we can get the frequency distribution for the deletion genotype 
+    
     # Pearson correlation squared loss
+    # Take the average frequency of each microhomology 
     x_mean = np.mean(normalized_fq)
     y_mean = np.mean(obs[idx])
     pearson_numerator = np.sum((normalized_fq - x_mean)*(obs[idx] - y_mean))
