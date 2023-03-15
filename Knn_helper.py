@@ -1,3 +1,5 @@
+#Source: https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/635a10c4da2415173c24243230faedca32a7092c/src-modeling-and-analysis/e5_ins_ratebpmodel.py
+
 from __future__ import division
 #import _config, _lib, _data, _predict, _predict2
 import sys, os, datetime, subprocess, math, pickle, imp, fnmatch
@@ -104,7 +106,7 @@ def generate_models(X, Y, bp_stats, Normalizer):
 ##
 @util.time_dec
 def main(data_nm = ''):
-  print NAME
+  print(NAME)
   global out_dir
   util.ensure_dir_exists(out_dir)
 
@@ -147,8 +149,6 @@ def main(data_nm = ''):
     elif 'VO' in exp or 'Lib1' in exp:
       all_rate_stats = all_rate_stats.append(rate_stats, ignore_index = True)
       all_bp_stats = all_bp_stats.append(bp_stats, ignore_index = True)
-
-    print exp, len(all_rate_stats)
 
   X, Y, Normalizer = featurize(all_rate_stats, 'Ins1bp/Del Ratio')
   generate_models(X, Y, all_bp_stats, Normalizer)
