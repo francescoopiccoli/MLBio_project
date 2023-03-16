@@ -186,16 +186,12 @@ def prepare_statistics(data_nm):
 # Load statistics from csv, or calculate 
 ##
 def load_statistics(data_nm):
-  print data_nm
   stats_csv_fn = out_dir + '%s.csv' % (data_nm)
   if not os.path.isfile(stats_csv_fn) or redo:
-    print 'Running statistics from scratch...'
     stats_csv = prepare_statistics(data_nm)
     stats_csv.to_csv(stats_csv_fn)
   else:
-    print 'Getting statistics from file...'
     stats_csv = pd.read_csv(stats_csv_fn, index_col = 0)
-  print 'Done'
   return 
 
 ##
@@ -207,8 +203,6 @@ def main(data_nm = ''):
   global out_dir
   util.ensure_dir_exists(out_dir)
 
-  import fi2_ins_ratio
-  import fk_1bpins
 
   exps = ['VO-spacers-HEK293-48h-controladj', 
           'VO-spacers-K562-48h-controladj',
