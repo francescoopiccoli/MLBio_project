@@ -69,7 +69,12 @@ def featurize(rate_stats, Y_nm):
 
     return X, Y, Normalizer
 
+##
+# Train KNN model, X=training data, Y=target values, bp_stats
+##
+
 def generate_models(X, Y, bp_stats, Normalizer):
+
   # Train rate model
   model = KNeighborsRegressor()
   model.fit(X, Y)
@@ -100,6 +105,98 @@ def generate_models(X, Y, bp_stats, Normalizer):
     pickle.dump(Normalizer, f)
 
   return
+
+##
+# Run statistics
+##
+def calc_statistics(df, exp, alldf_dict):
+  # Calculate statistics on df, saving to alldf_dict
+  # Deletion positions
+
+  # Denominator is crispr activity
+  df = _lib.crispr_subset(df)
+  if sum(df['Count']) <= 500:
+    return
+  df['Frequency'] = _lib.normalize_frequency(df)
+
+  criteria = (df['Category'] == 'ins') & (df['Length'] == 1)
+  if sum(df[criteria]['Count']) <= 100:
+    return
+  freq = sum(df[criteria]['Frequency'])
+  alldf_dict['Frequency'].append(freq)
+
+  s = df[criteria]
+
+  try:
+    a_frac = sum(s[s['Inserted Bases'] == 'A']['Frequency']) / freq
+  except TypeError:
+    a_frac = 0
+  alldf_dict['A frac'].append(a_frac)
+
+  try:
+    c_frac = sum(s[s['Inserted Bases'] == 'C']['Frequency']) / freq
+  except:
+    c_frac = 0
+  alldf_dict['C frac'].append(c_frac)
+
+  try:
+    g_frac = sum(s[s['Inserted Bases'] == 'G']['Frequency']) / freq
+  except:
+    g_frac = 0
+  alldf_dict['G frac'].append(g_frac)
+
+  try:
+    t_frac = sum(s[s['Inserted Bases'] == 'T']['Frequency']) / freq
+  except:
+    t_frac = 0
+  alldf_dict['T frac'].append(t_frac)
+
+  seq, cutsite = _lib.get_sequence_cutsite(df)
+  fivebase = seq[cutsite-1]
+  alldf_dict['Base'].append(fivebase)
+
+  alldf_dict['_Experiment'].append(exp)
+
+  return alldf_dict
+
+def prepare_statistics(data_nm):
+  # Input: Dataset
+  # Output: Uniformly processed dataset, requiring minimal processing for plotting but ideally enabling multiple plots
+  # Calculate statistics associated with each experiment by name
+
+  alldf_dict = defaultdict(list)
+
+  dataset = _data.load_dataset(data_nm)
+  if dataset is None:
+    return
+
+  timer = util.Timer(total = len(dataset))
+  # for exp in dataset.keys()[:100]:
+  for exp in dataset.keys():
+    df = dataset[exp]
+    calc_statistics(df, exp, alldf_dict)
+    timer.update()
+
+  # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
+  alldf = pd.DataFrame(alldf_dict)
+  return alldf
+
+
+##
+# Load statistics from csv, or calculate 
+##
+def load_statistics(data_nm):
+  print data_nm
+  stats_csv_fn = out_dir + '%s.csv' % (data_nm)
+  if not os.path.isfile(stats_csv_fn) or redo:
+    print 'Running statistics from scratch...'
+    stats_csv = prepare_statistics(data_nm)
+    stats_csv.to_csv(stats_csv_fn)
+  else:
+    print 'Getting statistics from file...'
+    stats_csv = pd.read_csv(stats_csv_fn, index_col = 0)
+  print 'Done'
+  return 
 
 ##
 # Main
@@ -154,10 +251,3 @@ def main(data_nm = ''):
   generate_models(X, Y, all_bp_stats, Normalizer)
 
   return
-
-
-if __name__ == '__main__':
-  if len(sys.argv) == 2:
-    main(data_nm = sys.argv[1])
-  else:
-    main()
