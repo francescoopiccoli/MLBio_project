@@ -65,6 +65,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
   LOSS = 0
   # iterate over all target site:  : [
   # [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]]
+  knn_features = []
   for idx in range(len(inp)):
 
     ##
@@ -84,7 +85,6 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     # Create a vector containing as many entries as the n of rows for the current target site.
     mhfull_contribution = np.zeros(mh_vector.shape)
     
-    knn_features = []
     # Go over all the microhomology lengths for that target site ie CTTTCACTTTATAGATTTAT
     for jdx in range(len(mh_vector)):
       # this bit is explained at line 866 of the supplementary methods pdf.
@@ -203,11 +203,10 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     
     # Append to list for storing
     knn_features.append([NAMES[idx], mh_total, precision_score])
-
-    # if iter == num_epochs - 1:
-    column_names = ["exp", "total_del_phi", "precision_score_dl"]
-    knn_features_df = pd.DataFrame(knn_features, columns=column_names)
-    knn_features_df.to_pickle(out_dir_params + 'knn_features_from_loss_function.pkl')
+  # Fix it.
+  column_names = ["exp", "total_del_phi", "precision_score_dl"]
+  knn_features_df = pd.DataFrame(knn_features, columns=column_names)
+  knn_features_df.to_pickle(out_dir_params + 'knn_features_from_loss_function.pkl')
     # L2-Loss
     # LOSS += np.sum((normalized_fq - obs[idx])**2)
   return LOSS / num_samples
@@ -451,7 +450,7 @@ def parse_input_data(data):
   exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6)) 
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = deletions_data['Sample_Name'].unique()
+  exps = deletions_data['Sample_Name'].unique()[:10]
 
   # Microhomology data has the homology length greater than 0
   mh_data = deletions_data[deletions_data['homologyLength'] != 0]
@@ -548,8 +547,10 @@ if __name__ == '__main__':
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
   save_train_test_names(NAMES_train, NAMES_test, out_dir)
-
-
+  test = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')  
+  print(test)
+  
+  
   ''' 
   Training parameters
   '''
