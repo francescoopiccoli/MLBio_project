@@ -106,93 +106,6 @@ def generate_models(X, Y, bp_stats, Normalizer):
 
   return
 
-##
-# Run statistics
-##
-def calc_statistics(df, exp, alldf_dict):
-  # Calculate statistics on df, saving to alldf_dict
-  # Deletion positions
-
-  # Denominator is crispr activity
-  df = _lib.crispr_subset(df)
-  if sum(df['Count']) <= 500:
-    return
-  df['Frequency'] = _lib.normalize_frequency(df)
-
-  criteria = (df['Category'] == 'ins') & (df['Length'] == 1)
-  if sum(df[criteria]['Count']) <= 100:
-    return
-  freq = sum(df[criteria]['Frequency'])
-  alldf_dict['Frequency'].append(freq)
-
-  s = df[criteria]
-
-  try:
-    a_frac = sum(s[s['Inserted Bases'] == 'A']['Frequency']) / freq
-  except TypeError:
-    a_frac = 0
-  alldf_dict['A frac'].append(a_frac)
-
-  try:
-    c_frac = sum(s[s['Inserted Bases'] == 'C']['Frequency']) / freq
-  except:
-    c_frac = 0
-  alldf_dict['C frac'].append(c_frac)
-
-  try:
-    g_frac = sum(s[s['Inserted Bases'] == 'G']['Frequency']) / freq
-  except:
-    g_frac = 0
-  alldf_dict['G frac'].append(g_frac)
-
-  try:
-    t_frac = sum(s[s['Inserted Bases'] == 'T']['Frequency']) / freq
-  except:
-    t_frac = 0
-  alldf_dict['T frac'].append(t_frac)
-
-  seq, cutsite = _lib.get_sequence_cutsite(df)
-  fivebase = seq[cutsite-1]
-  alldf_dict['Base'].append(fivebase)
-
-  alldf_dict['_Experiment'].append(exp)
-
-  return alldf_dict
-
-def prepare_statistics(data_nm):
-  # Input: Dataset
-  # Output: Uniformly processed dataset, requiring minimal processing for plotting but ideally enabling multiple plots
-  # Calculate statistics associated with each experiment by name
-
-  alldf_dict = defaultdict(list)
-
-  dataset = _data.load_dataset(data_nm)
-  if dataset is None:
-    return
-
-  timer = util.Timer(total = len(dataset))
-  # for exp in dataset.keys()[:100]:
-  for exp in dataset.keys():
-    df = dataset[exp]
-    calc_statistics(df, exp, alldf_dict)
-    timer.update()
-
-  # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
-  alldf = pd.DataFrame(alldf_dict)
-  return alldf
-
-
-##
-# Load statistics from csv, or calculate 
-##
-def load_statistics(data_nm):
-  stats_csv_fn = out_dir + '%s.csv' % (data_nm)
-  if not os.path.isfile(stats_csv_fn) or redo:
-    stats_csv = prepare_statistics(data_nm)
-    stats_csv.to_csv(stats_csv_fn)
-  else:
-    stats_csv = pd.read_csv(stats_csv_fn, index_col = 0)
-  return 
 
 ##
 # Main
@@ -203,6 +116,8 @@ def main(data_nm = ''):
   global out_dir
   util.ensure_dir_exists(out_dir)
 
+  import fi2_ins_ratio
+  import fk_1bpins
 
   exps = ['VO-spacers-HEK293-48h-controladj', 
           'VO-spacers-K562-48h-controladj',
