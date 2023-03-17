@@ -130,7 +130,8 @@ def calc_statistics(df, exp, alldf_dict):
 
   #Should be always 1
   editing_rate = 1
-
+  alldf_dict['Editing Rate'].append(editing_rate)
+  
   # # Denominator is ins
   # if sum(_lib.crispr_subset(df)['Count']) <= 1000:
   #   return
