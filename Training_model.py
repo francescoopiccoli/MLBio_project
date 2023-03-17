@@ -17,7 +17,7 @@ from mylib import util
 import seaborn as sns, pandas as pd
 from matplotlib.colors import Normalize
 from sklearn.metrics import r2_score
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, entropy
 from sklearn.model_selection import train_test_split
 from matplotlib.backends.backend_pdf import PdfPages 
 import matplotlib.patches as mpatches
@@ -67,6 +67,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
   LOSS = 0
   # iterate over all target site:  : [
   # [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]]
+  knn_features = []
   for idx in range(len(inp)):
 
     ##
@@ -78,11 +79,14 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     Js = np.array(del_lens[idx])
     # compute the phi scores from psi scores penalizing on the deletion length Js.
     unnormalized_fq = np.exp(mh_scores - 0.25*Js)
+    # Sum all the mh phi scores for that target site.
+    mh_phi_total = np.sum(unnormalized_fq, dtype=np.float64)
     
     # Add MH-less contribution at full MH deletion lengths
     mh_vector = inp[idx].T[0] # [CTTTCACTTTATAGATTTAT_mhls] ie array containg all microhomology length for the current target site we are considering
     # Create a vector containing as many entries as the n of rows for the current target site.
     mhfull_contribution = np.zeros(mh_vector.shape)
+    
     # Go over all the microhomology lengths for that target site ie CTTTCACTTTATAGATTTAT
     for jdx in range(len(mh_vector)):
       # this bit is explained at line 866 of the supplementary methods pdf.
@@ -146,7 +150,9 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     dls = dls.reshape(28, 1)
     nn2_scores = nn_match_score_function(nn2_params, dls)
     unnormalized_nn2 = np.exp(nn2_scores - 0.25*np.arange(1, 28+1))
-
+    # Sum all the mh-less phi scores for that target site.
+    mh_less_phi_total = np.sum(unnormalized_nn2, dtype=np.float64)
+    
     # iterate through del_lens vector, adding mh_scores (already computed above) to the correct index
     # Create an array/vector of 28 entries, each for each deletion length considered.
     mh_contribution = np.zeros(28,)
@@ -183,6 +189,26 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     neg_rsq = rsq * -1
     LOSS += neg_rsq
 
+    # Calculate mh_total
+    mh_phi_total = mh_phi_total._value if not isinstance(mh_phi_total, float) else mh_phi_total
+    mh_less_phi_total = mh_less_phi_total._value if not isinstance(mh_less_phi_total, float) else mh_less_phi_total  
+    mh_total = mh_phi_total + mh_less_phi_total
+    
+    normalized_del_freq_list = []
+    for dl_freq in normalized_fq:
+      if isinstance(dl_freq, float):
+        normalized_del_freq_list.append(dl_freq)
+      else:
+        normalized_del_freq_list.append(dl_freq._value)
+    # The "1 - " part is implemented in the inDelphi.py file.
+    precision_score =  entropy(normalized_del_freq_list) / np.log(len(normalized_del_freq_list))
+    
+    # Append to list for storing
+    knn_features.append([NAMES[idx], mh_total, precision_score])
+  # Fix it.
+  column_names = ["exp", "total_del_phi", "precision_score_dl"]
+  knn_features_df = pd.DataFrame(knn_features, columns=column_names)
+  knn_features_df.to_pickle(out_dir_params + 'knn_features_from_loss_function.pkl')
     # L2-Loss
     # LOSS += np.sum((normalized_fq - obs[idx])**2)
   return LOSS / num_samples
@@ -527,6 +553,7 @@ if __name__ == '__main__':
   # Neural network considers each N * 2 input, transforming it into N * 1 output.
   OBS = np.array(freqs)
   OBS2 = np.array(dl_freqs)
+  global NAMES
   NAMES = np.array([str(s) for s in exps])
   DEL_LENS = np.array(del_lens)
 
@@ -535,13 +562,15 @@ if __name__ == '__main__':
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
   save_train_test_names(NAMES_train, NAMES_test, out_dir)
-
-
+  test = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')  
+  print(test)
+  
+  
   ''' 
   Training parameters
   '''
   param_scale = 0.1
-  num_epochs = 7*200 + 1
+  num_epochs = 30
   step_size = 0.10
 
   init_nn_params = init_random_params(param_scale, nn_layer_sizes, rs = seed)
