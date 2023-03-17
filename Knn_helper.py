@@ -178,7 +178,12 @@ def calc_statistics(df, exp, alldf_dict):
 
   # Store the Fivebase and threebase in df
   # Both normally and one-hot encoded
+
+  # Get cutside by diving sequence length by 2
+  # TODO: Is this correct
   cutsite = (int) (len(exp) / 2)
+
+  # Get fifth base and encode it
   fivebase = exp[cutsite - 1]
   alldf_dict['Fivebase'].append(fivebase)
 
@@ -192,6 +197,7 @@ def calc_statistics(df, exp, alldf_dict):
     fivebase_oh = np.array([0, 0, 0, 1])
   alldf_dict['Fivebase_OH'].append(fivebase_oh)
 
+  # Get third base and encode it
   threebase = exp[cutsite]
   alldf_dict['Threebase'].append(threebase)
   if threebase == 'A':
@@ -206,7 +212,6 @@ def calc_statistics(df, exp, alldf_dict):
 
   alldf_dict['_Experiment'].append(exp)
 
-
   return alldf_dict
 
 def prepare_statistics(data_nm):
@@ -216,8 +221,11 @@ def prepare_statistics(data_nm):
 
   alldf_dict = defaultdict(list)
 
+  alldf_dict_1bp = defaultdict(list)
+
   timer = util.Timer(total = len(data_nm))
 
+  #TODO: Not sure if this is the idea?
   insertion_data = data_nm[data_nm['Type'] == 'INSERTION'].reset_index()
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
@@ -227,11 +235,66 @@ def prepare_statistics(data_nm):
     ins_data = insertion_data[insertion_data['Sample_Name'] == exp]
     print("seq: " + exp)
     calc_statistics(ins_data, exp, alldf_dict)
+    calc_statistics_1bp(ins_data, exp, alldf_dict_1bp)
     timer.update()
 
   # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
-  alldf = pd.DataFrame(alldf_dict)
-  return alldf
+  return pd.DataFrame(alldf_dict), pd.DataFrame(alldf_dict_1bp)
+
+
+
+##
+# Run statistics
+##
+def calc_statistics_1bp(df, exp, alldf_dict):
+  # Calculate statistics on df, saving to alldf_dict
+  # Deletion positions
+
+
+  if sum(df['Count']) <= 500:
+    return
+  
+  df['Frequency'] = _lib.normalize_frequency(df)
+
+  criteria = (df['Category'] == 'ins') & (df['Length'] == 1)
+  if sum(df[criteria]['Count']) <= 100:
+    return
+  freq = sum(df[criteria]['Frequency'])
+  alldf_dict['Frequency'].append(freq)
+
+  s = df[criteria]
+
+  try:
+    a_frac = sum(s[s['Inserted Bases'] == 'A']['Frequency']) / freq
+  except TypeError:
+    a_frac = 0
+  alldf_dict['A frac'].append(a_frac)
+
+  try:
+    c_frac = sum(s[s['Inserted Bases'] == 'C']['Frequency']) / freq
+  except:
+    c_frac = 0
+  alldf_dict['C frac'].append(c_frac)
+
+  try:
+    g_frac = sum(s[s['Inserted Bases'] == 'G']['Frequency']) / freq
+  except:
+    g_frac = 0
+  alldf_dict['G frac'].append(g_frac)
+
+  try:
+    t_frac = sum(s[s['Inserted Bases'] == 'T']['Frequency']) / freq
+  except:
+    t_frac = 0
+  alldf_dict['T frac'].append(t_frac)
+
+  seq, cutsite = _lib.get_sequence_cutsite(df)
+  fivebase = seq[cutsite-1]
+  alldf_dict['Base'].append(fivebase)
+
+  alldf_dict['_Experiment'].append(exp)
+
+  return alldf_dict
 
 
 ##
@@ -248,13 +311,13 @@ def train_knn(knn_features, data_nm):
   all_rate_stats = pd.DataFrame()
   all_bp_stats = pd.DataFrame()  
 
-  rate_stats = prepare_statistics(data_nm)
+  rate_stats, bp_stats = prepare_statistics(data_nm)
   print(rate_stats.sample(n=5))
-  #TODO: Get this somehow?
+  print(bp_stats.sample(n=5))
+  
+  #TODO: Get Entropy somehow?
   # rate_stats = rate_stats[rate_stats['Entropy'] > 0.01]
 
-
-  #bp_stats = fk_1bpins.load_statistics(exp)
   all_rate_stats = all_rate_stats.append(rate_stats, ignore_index = True)
   all_bp_stats = all_bp_stats.append(bp_stats, ignore_index = True)
 
