@@ -2,23 +2,36 @@
 
 from __future__ import division
 #import _config, _lib, _data, _predict, _predict2
-import sys, os, datetime, subprocess, math, pickle, imp, fnmatch
-import random
-sys.path.append('/cluster/mshen/')
+import sys, os
 import numpy as np
 from collections import defaultdict
 from mylib import util
-from mylib import compbio
 import pandas as pd
-import sklearn
-from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 
 
+##
+# Setup environment
+##
+def alphabetize(num):
+  assert num < 26**3, 'num bigger than 17576'
+  mapper = {0: 'a', 1: 'b', 2: 'c', 3: 'd', 4: 'e', 5: 'f', 6: 'g', 7: 'h', 8: 'i', 9: 'j', 10: 'k', 11: 'l', 12: 'm', 13: 'n', 14: 'o', 15: 'p', 16: 'q', 17: 'r', 18: 's', 19: 't', 20: 'u', 21: 'v', 22: 'w', 23: 'x', 24: 'y', 25: 'z'}
+  hundreds = int(num / (26*26)) % 26
+  tens = int(num / 26) % 26
+  ones = num % 26
+  return ''.join([mapper[hundreds], mapper[tens], mapper[ones]])
+
+def count_num_folders(out_dir):
+  for fold in os.listdir(out_dir):
+    assert os.path.isdir(out_dir + fold), 'Not a folder!'
+  return len(os.listdir(out_dir))
+
 # Default params
-DEFAULT_INP_DIR = '/cluster/mshen/prj/mmej_manda2/out/2017-10-27/mb_grab_exons/'
-NAME = util.get_fn(__file__)
-out_dir = _config.OUT_PLACE + NAME + '/'
+out_place = './output'
+util.ensure_dir_exists(out_place)
+num_folds = count_num_folders(out_place)
+out_letters = alphabetize(num_folds + 1)
+out_dir = out_place + out_letters + '/'
 
 ##
 # Functions
@@ -108,53 +121,140 @@ def generate_models(X, Y, bp_stats, Normalizer):
 
 
 ##
-# Main
+# Run statistics
 ##
-@util.time_dec
-def main(data_nm = ''):
-  print(NAME)
+def calc_statistics(df, exp, alldf_dict):
+  # Calculate statistics on df, saving to alldf_dict
+  # Deletion positions
+
+
+  #Should be always 1
+  editing_rate = 1
+
+  # # Denominator is ins
+  # if sum(_lib.crispr_subset(df)['Count']) <= 1000:
+  #   return
+
+  # editing_rate = sum(_lib.crispr_subset(df)['Count']) / sum(_lib.notnoise_subset(df)['Count'])
+  # alldf_dict['Editing Rate'].append(editing_rate)
+
+  # ins_criteria = (df['Category'] == 'ins') & (df['Length'] == 1) & (df['Indel with Mismatches'] != 'yes')
+  # ins_count = sum(df[ins_criteria]['Count'])
+
+  # del_criteria = (df['Category'] == 'del') & (df['Indel with Mismatches'] != 'yes')
+  # del_count = sum(df[del_criteria]['Count'])
+  # if del_count == 0:
+  #   return
+  # alldf_dict['Ins1bp/Del Ratio'].append(ins_count / (del_count + ins_count))
+
+  # mhdel_crit = (df['Category'] == 'del') & (df['Indel with Mismatches'] != 'yes') & (df['Microhomology-Based'] == 'yes')
+  # mhdel_count = sum(df[mhdel_crit]['Count'])
+  # try:
+  #   alldf_dict['Ins1bp/MHDel Ratio'].append(ins_count / (mhdel_count + ins_count))
+  # except ZeroDivisionError:
+  #   alldf_dict['Ins1bp/MHDel Ratio'].append(0)
+
+  # ins_ratio = ins_count / sum(_lib.crispr_subset(df)['Count'])
+  # alldf_dict['Ins1bp Ratio'].append(ins_ratio)
+
+  # seq, cutsite = _lib.get_sequence_cutsite(df)
+  # fivebase = seq[cutsite - 1]
+  # alldf_dict['Fivebase'].append(fivebase)
+
+  # _predict2.init_model()
+  # del_score = _predict2.total_deletion_score(seq, cutsite)
+  # alldf_dict['Del Score'].append(del_score)
+
+  # dlpred = _predict2.deletion_length_distribution(seq, cutsite)
+  # from scipy.stats import entropy
+  # norm_entropy = entropy(dlpred) / np.log(len(dlpred))
+  # alldf_dict['Entropy'].append(norm_entropy)
+
+  # local_seq = seq[cutsite - 4 : cutsite + 4]
+  # gc = (local_seq.count('C') + local_seq.count('G')) / len(local_seq)
+  # alldf_dict['GC'].append(gc)
+
+  # Store the Fivebase and threebase in df
+  # Both normally and one-hot encoded
+  cutsite = (int) (len(exp) / 2)
+  fivebase = exp[cutsite - 1]
+  alldf_dict['Fivebase'].append(fivebase)
+
+  if fivebase == 'A':
+    fivebase_oh = np.array([1, 0, 0, 0])
+  if fivebase == 'C':
+    fivebase_oh = np.array([0, 1, 0, 0])
+  if fivebase == 'G':
+    fivebase_oh = np.array([0, 0, 1, 0])
+  if fivebase == 'T':
+    fivebase_oh = np.array([0, 0, 0, 1])
+  alldf_dict['Fivebase_OH'].append(fivebase_oh)
+
+  threebase = exp[cutsite]
+  alldf_dict['Threebase'].append(threebase)
+  if threebase == 'A':
+    threebase_oh = np.array([1, 0, 0, 0])
+  if threebase == 'C':
+    threebase_oh = np.array([0, 1, 0, 0])
+  if threebase == 'G':
+    threebase_oh = np.array([0, 0, 1, 0])
+  if threebase == 'T':
+    threebase_oh = np.array([0, 0, 0, 1])
+  alldf_dict['Threebase_OH'].append(threebase_oh)
+
+  alldf_dict['_Experiment'].append(exp)
+
+
+  return alldf_dict
+
+def prepare_statistics(data_nm):
+  # Input: Dataset
+  # Output: Uniformly processed dataset, requiring minimal processing for plotting but ideally enabling multiple plots
+  # Calculate statistics associated with each experiment by name
+
+  alldf_dict = defaultdict(list)
+
+  timer = util.Timer(total = len(data_nm))
+
+  insertion_data = data_nm[data_nm['Type'] == 'INSERTION'].reset_index()
+
+  # To make this run in a short time, take only the first n elements (i.e. [:n])
+  exps = insertion_data['Sample_Name'].unique()[:10]
+
+  for exp in exps:
+    ins_data = insertion_data[insertion_data['Sample_Name'] == exp]
+    print("seq: " + exp)
+    calc_statistics(ins_data, exp, alldf_dict)
+    timer.update()
+
+  # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
+  alldf = pd.DataFrame(alldf_dict)
+  return alldf
+
+
+##
+# Train the KNN model
+##
+def train_knn(data_nm):
+  print('Generating KNN Model')
   global out_dir
   util.ensure_dir_exists(out_dir)
 
-  import fi2_ins_ratio
-  import fk_1bpins
+  #import fk_1bpins
 
-  exps = ['VO-spacers-HEK293-48h-controladj', 
-          'VO-spacers-K562-48h-controladj',
-          'DisLib-mES-controladj',
-          'DisLib-U2OS-controladj',
-          'Lib1-mES-controladj'
-         ]
-
+  
   all_rate_stats = pd.DataFrame()
   all_bp_stats = pd.DataFrame()  
-  for exp in exps:
-    rate_stats = fi2_ins_ratio.load_statistics(exp)
-    rate_stats = rate_stats[rate_stats['Entropy'] > 0.01]
-    bp_stats = fk_1bpins.load_statistics(exp)
-    exps = rate_stats['_Experiment']
 
-    if 'DisLib' in exp:
-      crit = (rate_stats['_Experiment'] >= 73) & (rate_stats['_Experiment'] <= 300)
-      rs = rate_stats[crit]
-      all_rate_stats = all_rate_stats.append(rs, ignore_index = True)
+  rate_stats = prepare_statistics(data_nm)
+  print(rate_stats.sample(n=5))
+  #TODO: Get this somehow?
+  # rate_stats = rate_stats[rate_stats['Entropy'] > 0.01]
 
-      crit = (rate_stats['_Experiment'] >= 16) & (rate_stats['_Experiment'] <= 72)
-      rs = rate_stats[crit]
-      rs = rs[rs['Ins1bp Ratio'] < 0.3] # remove outliers
-      all_rate_stats = all_rate_stats.append(rs, ignore_index = True)
 
-      crit = (bp_stats['_Experiment'] >= 73) & (bp_stats['_Experiment'] <= 300)
-      rs = bp_stats[crit]
-      all_bp_stats = all_bp_stats.append(rs, ignore_index = True)
-
-      crit = (bp_stats['_Experiment'] >= 16) & (bp_stats['_Experiment'] <= 72)
-      rs = bp_stats[crit]
-      all_bp_stats = all_bp_stats.append(rs, ignore_index = True)
-
-    elif 'VO' in exp or 'Lib1' in exp:
-      all_rate_stats = all_rate_stats.append(rate_stats, ignore_index = True)
-      all_bp_stats = all_bp_stats.append(bp_stats, ignore_index = True)
+  #bp_stats = fk_1bpins.load_statistics(exp)
+  all_rate_stats = all_rate_stats.append(rate_stats, ignore_index = True)
+  all_bp_stats = all_bp_stats.append(bp_stats, ignore_index = True)
 
   X, Y, Normalizer = featurize(all_rate_stats, 'Ins1bp/Del Ratio')
   generate_models(X, Y, all_bp_stats, Normalizer)
