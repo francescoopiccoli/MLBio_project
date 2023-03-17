@@ -241,8 +241,6 @@ def prepare_statistics(data_nm):
   # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
   return pd.DataFrame(alldf_dict), pd.DataFrame(alldf_dict_1bp)
 
-
-
 ##
 # Run statistics
 ##
@@ -251,48 +249,51 @@ def calc_statistics_1bp(df, exp, alldf_dict):
   # Deletion positions
 
 
-  if sum(df['Count']) <= 500:
-    return
+  # if sum(df['Count']) <= 500:
+  #   return
   
-  df['Frequency'] = _lib.normalize_frequency(df)
+  # df['Frequency'] = _lib.normalize_frequency(df)
 
-  criteria = (df['Category'] == 'ins') & (df['Length'] == 1)
-  if sum(df[criteria]['Count']) <= 100:
-    return
-  freq = sum(df[criteria]['Frequency'])
-  alldf_dict['Frequency'].append(freq)
+  # criteria = (df['Category'] == 'ins') & (df['Length'] == 1)
+  # if sum(df[criteria]['Count']) <= 100:
+  #   return
+  # freq = sum(df[criteria]['Frequency'])
+  # alldf_dict['Frequency'].append(freq)
 
-  s = df[criteria]
+  # s = df[criteria]
 
-  try:
-    a_frac = sum(s[s['Inserted Bases'] == 'A']['Frequency']) / freq
-  except TypeError:
-    a_frac = 0
-  alldf_dict['A frac'].append(a_frac)
+  # freq = 1
 
-  try:
-    c_frac = sum(s[s['Inserted Bases'] == 'C']['Frequency']) / freq
-  except:
-    c_frac = 0
-  alldf_dict['C frac'].append(c_frac)
+  # try:
+  #   a_frac = sum(s[s['Inserted Bases'] == 'A']['Frequency']) / freq
+  # except TypeError:
+  #   a_frac = 0
+  # alldf_dict['A frac'].append(a_frac)
 
-  try:
-    g_frac = sum(s[s['Inserted Bases'] == 'G']['Frequency']) / freq
-  except:
-    g_frac = 0
-  alldf_dict['G frac'].append(g_frac)
+  # try:
+  #   c_frac = sum(s[s['Inserted Bases'] == 'C']['Frequency']) / freq
+  # except:
+  #   c_frac = 0
+  # alldf_dict['C frac'].append(c_frac)
 
-  try:
-    t_frac = sum(s[s['Inserted Bases'] == 'T']['Frequency']) / freq
-  except:
-    t_frac = 0
-  alldf_dict['T frac'].append(t_frac)
+  # try:
+  #   g_frac = sum(s[s['Inserted Bases'] == 'G']['Frequency']) / freq
+  # except:
+  #   g_frac = 0
+  # alldf_dict['G frac'].append(g_frac)
 
-  seq, cutsite = _lib.get_sequence_cutsite(df)
-  fivebase = seq[cutsite-1]
-  alldf_dict['Base'].append(fivebase)
+  # try:
+  #   t_frac = sum(s[s['Inserted Bases'] == 'T']['Frequency']) / freq
+  # except:
+  #   t_frac = 0
+  # alldf_dict['T frac'].append(t_frac)
 
-  alldf_dict['_Experiment'].append(exp)
+  # cutsite = (int) (len(exp) / 2)
+
+  # fivebase = seq[cutsite-1]
+  # alldf_dict['Base'].append(fivebase)
+
+  # alldf_dict['_Experiment'].append(exp)
 
   return alldf_dict
 
