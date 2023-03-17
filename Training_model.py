@@ -540,10 +540,7 @@ if __name__ == '__main__':
   # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv  
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
 
-  # Train KNN
-  print('starting KNN training')
-  train_knn(data)
-
+  
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
     #mhl and gcf are both arrays
@@ -562,9 +559,14 @@ if __name__ == '__main__':
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
   save_train_test_names(NAMES_train, NAMES_test, out_dir)
-  test = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')  
-  print(test)
+   
+  knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl') 
+  print(knn_features)
   
+  # Train KNN
+  print('starting KNN training')
+  train_knn(knn_features, data)
+
   
   ''' 
   Training parameters

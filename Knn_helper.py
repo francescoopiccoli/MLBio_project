@@ -131,7 +131,8 @@ def calc_statistics(df, exp, alldf_dict):
   #Should be always 1
   editing_rate = 1
   alldf_dict['Editing Rate'].append(editing_rate)
-  
+
+
   # # Denominator is ins
   # if sum(_lib.crispr_subset(df)['Count']) <= 1000:
   #   return
@@ -236,7 +237,7 @@ def prepare_statistics(data_nm):
 ##
 # Train the KNN model
 ##
-def train_knn(data_nm):
+def train_knn(knn_features, data_nm):
   print('Generating KNN Model')
   global out_dir
   util.ensure_dir_exists(out_dir)
