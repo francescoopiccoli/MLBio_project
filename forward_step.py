@@ -1,4 +1,4 @@
-import numpy as np
+import autograd.numpy as np
 
 def relu(x):       return np.maximum(0, x)
 def sigmoid(x):    return 0.5 * (np.tanh(x) + 1.0)
