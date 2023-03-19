@@ -43,7 +43,6 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
   # [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]]
   knn_features = []
   for idx in range(len(inp)):
-
     ##
     # MH-based deletion frequencies
     # inp[idx]:  [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]
@@ -179,19 +178,21 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     
     # Append to list for storing
     knn_features.append([NAMES[idx], mh_total, precision_score])
+
   # Fix it.
   column_names = ["exp", "total_del_phi", "precision_score_dl"]
   knn_features_df = pd.DataFrame(knn_features, columns=column_names)
   knn_features_df.to_pickle(out_dir_params + 'knn_features_from_loss_function.pkl')
-    # L2-Loss
-    # LOSS += np.sum((normalized_fq - obs[idx])**2)
+
+  # L2-Loss
+  # LOSS += np.sum((normalized_fq - obs[idx])**2)
   return LOSS / num_samples
 
 
 def parse_input_data(data):
   # We care about deletions (MH and MH-less) for the neural networks.
   deletions_data = data[data['Type'] == 'DELETION'].reset_index()
-  exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6)) 
+  exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
   exps = deletions_data['Sample_Name'].unique()[:10]
@@ -304,7 +305,6 @@ if __name__ == '__main__':
 
   batch_size = 200
   num_batches = int(np.ceil(len(INP_train) / batch_size))
-
   objective = lambda nn_params, nn2_params, iter: main_objective(nn_params, nn2_params, INP_train, OBS_train, OBS2_train, DEL_LENS_train, batch_size, seed)
   both_objective_grad = grad(objective, argnum=[0,1])
 
