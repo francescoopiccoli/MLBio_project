@@ -179,7 +179,6 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     # Append to list for storing
     knn_features.append([NAMES[idx], mh_total, precision_score])
 
-  # Fix it.
   column_names = ["exp", "total_del_phi", "precision_score_dl"]
   knn_features_df = pd.DataFrame(knn_features, columns=column_names)
   knn_features_df.to_pickle(out_dir_params + 'knn_features_from_loss_function.pkl')
