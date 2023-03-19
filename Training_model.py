@@ -39,6 +39,7 @@ def batch_normalize(activations):
 # Compute loss. 
 def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
   LOSS = 0
+
   # iterate over all target site:  : [
   # [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]]
   knn_features = []
@@ -78,20 +79,22 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
         # then we sum those two vectors: here mhfull_contribution is all zeros,
         # so the sum is gonna be equal to the mask again
         mhfull_contribution = mhfull_contribution + mask
+
     # Line 866 of the supplementary methods pdf.
     # here we are actually summing the mh scores with the mhless scores for the full microhomology rows
     # using the mhfull_contribution computed earlier using the mask.
     # unnormalized_fq is gonna be an array/list/vector with a score for every microhomology
     # with as many entries as the n of rows for that particular target site
     unnormalized_fq = unnormalized_fq + mhfull_contribution
+
     # Line 871 of the supplementary methods pdf.
     # Here we are getting the actual genotype deletion frequency distribution 
     # by normalizing all the scores in order for them to sum to 1.
     normalized_fq = np.divide(unnormalized_fq, np.sum(unnormalized_fq))
 
-  # each target site can have multiple/diverse microhomology, each microhomology corresponds to
-  # a particular deletion genotype so from the score of the microhomology we can get to the likelihood/frequency of its particular deletion genotype
-  # hence from the microhomology scores we can get the frequency distribution for the deletion genotype 
+    # each target site can have multiple/diverse microhomology, each microhomology corresponds to
+    # a particular deletion genotype so from the score of the microhomology we can get to the likelihood/frequency of its particular deletion genotype
+    # hence from the microhomology scores we can get the frequency distribution for the deletion genotype 
     
     # Pearson correlation squared loss
     # Take the mean predicted frequency of all deletion genotype for that target site.   
@@ -162,10 +165,64 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     neg_rsq = rsq * -1
     LOSS += neg_rsq
 
-    # Calculate mh_total
+  # L2-Loss
+  # LOSS += np.sum((normalized_fq - obs[idx])**2)
+  return LOSS / num_samples
+
+# Save kNN features
+# The function is basically a copy of main_objective but
+# only with the parts necessary for the kNN feature computation
+def save_knn_features(nn_params, nn2_params, inp, del_lens):
+  knn_features = []
+
+  for idx in range(len(inp)):
+    mh_scores = fw.nn_match_score_function(nn_params, inp[idx])
+    Js = np.array(del_lens[idx])
+    unnormalized_fq = np.exp(mh_scores - 0.25*Js)
+    mh_phi_total = np.sum(unnormalized_fq, dtype=np.float64)
+    
+    mh_vector = inp[idx].T[0]
+    mhfull_contribution = np.zeros(mh_vector.shape)
+    
+    for jdx in range(len(mh_vector)):
+      if del_lens[idx][jdx] == mh_vector[jdx]:
+        dl = del_lens[idx][jdx]
+        mhless_score = fw.nn_match_score_function(nn2_params, np.array(dl))
+        mhless_score = np.exp(mhless_score - 0.25*dl)
+        mask = np.concatenate([np.zeros(jdx,), np.ones(1,) * mhless_score, np.zeros(len(mh_vector) - jdx - 1,)])
+        mhfull_contribution = mhfull_contribution + mask
+
+    unnormalized_fq = unnormalized_fq + mhfull_contribution
+    normalized_fq = np.divide(unnormalized_fq, np.sum(unnormalized_fq))
+
+    dls = np.arange(1, 28+1)
+    dls = dls.reshape(28, 1)
+    nn2_scores = fw.nn_match_score_function(nn2_params, dls)
+    unnormalized_nn2 = np.exp(nn2_scores - 0.25*np.arange(1, 28+1))
+    mh_less_phi_total = np.sum(unnormalized_nn2, dtype=np.float64)
+    
+    mh_contribution = np.zeros(28,)
+    for jdx in range(len(Js)):
+      dl = Js[jdx]
+      if dl > 28:
+        break
+      mhs = np.exp(mh_scores[jdx] - 0.25*dl)
+      mask = np.concatenate([np.zeros(dl - 1,), np.ones(1, ) * mhs, np.zeros(28 - (dl - 1) - 1,)])
+      mh_contribution = mh_contribution + mask
+
+    # We need to use predictions from the second network
+    # based on the authors code (file src-modeling-and-analysis/fi2_ins_ratio.py)
+    unnormalized_nn2 = unnormalized_nn2 + mh_contribution
+    normalized_fq = np.divide(unnormalized_nn2, np.sum(unnormalized_nn2))
+
+    #
+    # Start calculating the kNN features
+    # 
+
+    # Calculate total phi
     mh_phi_total = mh_phi_total._value if not isinstance(mh_phi_total, float) else mh_phi_total
     mh_less_phi_total = mh_less_phi_total._value if not isinstance(mh_less_phi_total, float) else mh_less_phi_total  
-    mh_total = mh_phi_total + mh_less_phi_total
+    phi_total = mh_phi_total + mh_less_phi_total
     
     normalized_del_freq_list = []
     for dl_freq in normalized_fq:
@@ -173,19 +230,16 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
         normalized_del_freq_list.append(dl_freq)
       else:
         normalized_del_freq_list.append(dl_freq._value)
+        
     # The "1 - " part is implemented in the inDelphi.py file.
     precision_score =  entropy(normalized_del_freq_list) / np.log(len(normalized_del_freq_list))
     
     # Append to list for storing
-    knn_features.append([NAMES[idx], mh_total, precision_score])
+    knn_features.append([NAMES[idx], phi_total, precision_score])
 
   column_names = ["exp", "total_del_phi", "precision_score_dl"]
   knn_features_df = pd.DataFrame(knn_features, columns=column_names)
   knn_features_df.to_pickle(out_dir_params + 'knn_features_from_loss_function.pkl')
-
-  # L2-Loss
-  # LOSS += np.sum((normalized_fq - obs[idx])**2)
-  return LOSS / num_samples
 
 
 def parse_input_data(data):
@@ -343,4 +397,8 @@ if __name__ == '__main__':
                                   num_iters = num_epochs,
                                   callback = print_perf)
 
-  print('Done')
+  print('NN_1 and NN_2 successfully trained!')
+
+  print('Start kNN training')
+  save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
+  print('kNN features successfully calculated!')

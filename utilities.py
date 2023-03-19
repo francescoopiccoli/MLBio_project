@@ -28,7 +28,7 @@ def count_num_folders(out_dir):
     assert os.path.isdir(out_dir + fold), 'Not a folder!'
   return len(os.listdir(out_dir))
 
-  # TODO : Fix this
+# TODO : Fix this
 def copy_script(out_dir):
   src_dir = '/cluster/mshen/prj/mmej_figures/src/'
   script_nm = __file__
