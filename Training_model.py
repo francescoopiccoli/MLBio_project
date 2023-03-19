@@ -401,4 +401,6 @@ if __name__ == '__main__':
 
   print('Start kNN training')
   save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
+  test = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')  
+  print(test)
   print('kNN features successfully calculated!')
