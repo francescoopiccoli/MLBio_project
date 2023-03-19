@@ -6,21 +6,13 @@ from __future__ import print_function
 import autograd.numpy as np
 import autograd.numpy.random as npr
 from autograd.differential_operators import grad
-from autograd.misc import flatten
-from past.builtins import xrange 
 import matplotlib
 matplotlib.use('Pdf')
-import matplotlib.pyplot as plt
-from collections import defaultdict
-import sys, string, pickle, subprocess, os, datetime
+import pickle, datetime
 from mylib import util
-import seaborn as sns, pandas as pd
-from matplotlib.colors import Normalize
-from sklearn.metrics import r2_score
-from scipy.stats import pearsonr, entropy
+import pandas as pd
+from scipy.stats import entropy
 from sklearn.model_selection import train_test_split
-from matplotlib.backends.backend_pdf import PdfPages 
-import matplotlib.patches as mpatches
 import utilities as ut
 import forward_step as fw
 import backprop as bp
@@ -226,8 +218,8 @@ def parse_input_data(data):
     # both for microhomology and non microhomology deletion.
     exp_del_freqs = []
     exp_data = deletions_data[deletions_data['Sample_Name'] == exp]
-    total_deletion_events = sum(exp_data['countEvents'])
     dl_freq_data = exp_data[exp_data['Size'] <= 28]
+    total_deletion_events = sum(dl_freq_data['countEvents'])
     for del_len in range(1, 28+1):
       dl_freq = sum(dl_freq_data[dl_freq_data['Size'] == del_len]['countEvents']) / total_deletion_events
       exp_del_freqs.append(dl_freq)
@@ -299,8 +291,6 @@ if __name__ == '__main__':
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
   ut.save_train_test_names(NAMES_train, NAMES_test, out_dir)
-  test = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')  
-  print(test)
   
   ''' 
   Training parameters
@@ -310,21 +300,12 @@ if __name__ == '__main__':
   step_size = 0.10
 
   init_nn_params = init_random_params(param_scale, nn_layer_sizes, rs = seed)
-  # init_nn_params = pickle.load(open('/cluster/mshen/prj/mmej_manda/out/2017-08-23/i2_model_mmh/aax/parameters/aav_nn.pkl'))
-
   init_nn2_params = init_random_params(param_scale, nn2_layer_sizes, rs = seed)
 
-  # batch_size = len(INP_train)   # use all of training data
   batch_size = 200
   num_batches = int(np.ceil(len(INP_train) / batch_size))
-  def batch_indices(iter):
-    idx = iter % num_batches
-    return slice(idx * batch_size, (idx+1) * batch_size)
 
-  def objective(nn_params, nn2_params, iter):
-    idx = batch_indices(iter)
-    return main_objective(nn_params, nn2_params, INP_train, OBS_train, OBS2_train, DEL_LENS_train, batch_size, seed)
-
+  objective = lambda nn_params, nn2_params, iter: main_objective(nn_params, nn2_params, INP_train, OBS_train, OBS2_train, DEL_LENS_train, batch_size, seed)
   both_objective_grad = grad(objective, argnum=[0,1])
 
   def print_perf(nn_params, nn2_params, iter):
