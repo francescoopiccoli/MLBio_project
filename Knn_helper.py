@@ -156,9 +156,8 @@ def calc_statistics(df, exp, alldf_dict):
   # Both normally and one-hot encoded
 
   print(len(exp))
-  # Get cutside by diving sequence length by 2
-  # TODO: Is this correct
-  cutsite = (int) (len(exp) / 2)
+  # Sample + sequence length is 28, (of which 20 for the sequence)
+  cutsite = (int) (len(exp) - 10)
 
   # Get fifth base and encode it
   fivebase = exp[cutsite - 1]
