@@ -30,7 +30,7 @@ def count_num_folders(out_dir):
 
 # TODO : Fix this
 def copy_script(out_dir):
-  src_dir = '/cluster/mshen/prj/mmej_figures/src/'
+  src_dir = ''
   script_nm = __file__
   subprocess.call('cp ' + src_dir + script_nm + ' ' + out_dir, shell = True)
   return
