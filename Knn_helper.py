@@ -156,6 +156,7 @@ def calc_statistics(df, exp, alldf_dict):
   # Both normally and one-hot encoded
 
   print(len(exp))
+  # TODO: This is hardcoded
   # Sample + sequence length is 28, (of which 20 for the sequence)
   cutsite = (int) (len(exp) - 10)
 
