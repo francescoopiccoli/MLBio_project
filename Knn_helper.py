@@ -45,10 +45,8 @@ def featurize(rate_stats, Y_nm):
 
     total_del_phis = np.array(rate_stats['total_del_phi']).reshape(len(rate_stats['total_del_phi']), 1)
     precision_scores_dl = np.array(rate_stats['precision_score_dl']).reshape(len(rate_stats['precision_score_dl']), 1)
-    print(total_del_phis.shape, fivebases.shape, precision_scores_dl.shape)
 
     Y = np.array(rate_stats[Y_nm])
-    print(Y_nm)
     
     Normalizer = [(np.mean(fivebases.T[2]),
                       np.std(fivebases.T[2])),
@@ -63,8 +61,7 @@ def featurize(rate_stats, Y_nm):
                   (np.mean(precision_scores_dl),
                       np.std(precision_scores_dl)),
                  ]
-    print(type(fivebases))
-    print(fivebases.T)
+  
     fiveG = (fivebases.T[2] - np.mean(fivebases.T[2])) / np.std(fivebases.T[2])
     fiveT = (fivebases.T[3] - np.mean(fivebases.T[3])) / np.std(fivebases.T[3])
     threeA = (threebases.T[0] - np.mean(threebases.T[0])) / np.std(threebases.T[0])
@@ -85,7 +82,6 @@ def featurize(rate_stats, Y_nm):
 ##
 
 def generate_models(X, Y, bp_stats, Normalizer):
-
   # Train rate model
   model = KNeighborsRegressor()
   model.fit(X, Y)
@@ -96,7 +92,7 @@ def generate_models(X, Y, bp_stats, Normalizer):
   bp_model = dict()
   ins_bases = ['A frac', 'C frac', 'G frac', 'T frac']
   t_melt = pd.melt(bp_stats, 
-                   id_vars = ['Base'], 
+                   id_vars = ['Fivebase'], 
                    value_vars = ins_bases, 
                    var_name = 'Ins Base', 
                    value_name = 'Fraction')
@@ -104,15 +100,20 @@ def generate_models(X, Y, bp_stats, Normalizer):
     bp_model[base] = dict()
     mean_vals = []
     for ins_base in ins_bases:
-      crit = (t_melt['Base'] == base) & (t_melt['Ins Base'] == ins_base)
+      crit = (t_melt['Fivebase'] == base) & (t_melt['Ins Base'] == ins_base)
       mean_vals.append(float(np.mean(t_melt[crit])))
     for bp, freq in zip(list('ACGT'), mean_vals):
-      bp_model[base][bp] = freq / sum(mean_vals)
+      # I added this if to avoid the error: ZeroDivisionError: float division by zero 
+      # The fact that this was not there in the original code, makes me think that the error was not occurring in the original code
+      if sum(mean_vals) != 0:
+        bp_model[base][bp] = freq / sum(mean_vals)
+      else:
+        bp_model[base][bp] = 0
 
-  with open(out_dir + 'bp_model_v2.pkl', 'w') as f:
+  with open(out_dir + 'bp_model_v2.pkl', 'wb') as f:
     pickle.dump(bp_model, f)
 
-  with open(out_dir + 'Normalizer_v2.pkl', 'w') as f:
+  with open(out_dir + 'Normalizer_v2.pkl', 'wb') as f:
     pickle.dump(Normalizer, f)
 
   return
@@ -154,7 +155,6 @@ def calc_statistics(df, exp, alldf_dict):
   # Store the Fivebase and threebase in df
   # Both normally and one-hot encoded
 
-  print(len(exp))
   # TODO: This is hardcoded
   # Sample + sequence length is 28, (of which 20 for the sequence)
   cutsite = (int) (len(exp) - 10)
@@ -203,10 +203,13 @@ def prepare_statistics(count_and_deletion_df):
   exps = count_and_deletion_df['Sample_Name'].unique()[:10]
   for exp in exps:
     all_data = count_and_deletion_df[count_and_deletion_df['Sample_Name'] == exp]
-    #ins_data = insertion_data[insertion_data['Sample_Name'] == exp]
+    # We get a warning for this: A value is trying to be set on a copy of a slice from a DataFrame. Try using .loc[row_indexer,col_indexer] = value instead
+    all_data["Frequency"] = all_data["countEvents"] / sum(all_data["countEvents"])
+    ins_data = all_data[(all_data['Type'] == 'INSERTION') & (all_data['Indel'].str.startswith('1+'))]
     print("seq: " + exp)
+  
     calc_statistics(all_data, exp, alldf_dict)
-    # calc_statistics_1bp(ins_data, exp, alldf_dict_1bp)
+    calc_statistics_1bp(ins_data, exp, alldf_dict_1bp)
     timer.update()
 
   # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
@@ -216,7 +219,41 @@ def prepare_statistics(count_and_deletion_df):
 # Run statistics
 ##
 def calc_statistics_1bp(df, exp, alldf_dict):
-  pass
+  alldf_dict['exp'].append(exp)
+  onebp_freq = sum(df['Frequency'])
+  try:
+    a_frac = sum(df[df['Indel'].str.endswith('A')]['Frequency']) / onebp_freq
+  except:
+    a_frac = 0
+  alldf_dict['A frac'].append(a_frac)
+
+  try:
+    c_frac = sum(df[df['Indel'].str.endswith('C')]['Frequency']) / onebp_freq
+  except:
+    c_frac = 0
+  alldf_dict['C frac'].append(c_frac)
+
+  try:
+    g_frac = sum(df[df['Indel'].str.endswith('G')]['Frequency']) / onebp_freq
+  except:
+    g_frac = 0
+  alldf_dict['G frac'].append(g_frac)
+
+  try:
+    t_frac = sum(df[df['Indel'].str.endswith('T')]['Frequency']) / onebp_freq
+  except:
+    t_frac = 0
+  alldf_dict['T frac'].append(t_frac)
+
+  cutsite = (int) (len(exp) - 10)
+  # Get fifth base and encode it
+  fivebase = exp[cutsite - 1]
+  alldf_dict['Fivebase'].append(fivebase)
+
+  return alldf_dict
+  
+
+
 
 ##
 # Train the KNN model
@@ -232,11 +269,9 @@ def train_knn(knn_features, count_and_deletion_df):
 
   #TODO: Calculcate bp_stats correctly, need results from NNs
   rate_stats, bp_stats = prepare_statistics(count_and_deletion_df)
-  print(rate_stats.sample(n=5))
-  #print(bp_stats.sample(n=5))
+  print(rate_stats)
+  print(bp_stats)
   
-
-  print(all_rate_stats)  
   all_rate_stats = all_rate_stats.append(rate_stats, ignore_index = True)
   all_bp_stats = all_bp_stats.append(bp_stats, ignore_index = True)
 

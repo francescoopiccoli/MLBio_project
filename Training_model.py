@@ -363,7 +363,7 @@ if __name__ == '__main__':
   Training parameters
   '''
   param_scale = 0.1
-  num_epochs = 10
+  num_epochs = 2
   step_size = 0.10
 
   init_nn_params = init_random_params(param_scale, nn_layer_sizes, rs = seed)
