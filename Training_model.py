@@ -13,6 +13,9 @@ from mylib import util
 import pandas as pd
 from scipy.stats import entropy
 from sklearn.model_selection import train_test_split
+from matplotlib.backends.backend_pdf import PdfPages 
+import matplotlib.patches as mpatches
+from Knn_helper import train_knn
 import utilities as ut
 import forward_step as fw
 import backprop as bp
@@ -296,6 +299,7 @@ if __name__ == '__main__':
   ut.copy_script(out_dir)
   util.ensure_dir_exists(out_dir_params)
 
+
   log_fn = out_dir + '_log_%s.out' % (out_letters)
   with open(log_fn, 'w') as f:
     pass
@@ -314,14 +318,19 @@ if __name__ == '__main__':
   inp_dir = './input/'
 
   # A pickle file containing a dict object with two keys: counts and del_features.
+
   # The guide names are in the format <guide_id>_<guide sequence>. The guide sequence can be extracted from this id and used to determine the -3, -4 and -5 nucleotides for the kNN insertion model and insertion-type repair outcomes.
   master_data = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
+
   # counts: Contains a dataframe detailing the observed counts for each repair outcome (insertions and deletions) for every target sequence. The “fraction” column can be ignored.
   counts = master_data['counts'].drop('fraction', axis=1)
+
   # del_features: contains a dataframe detailing the deletion length, homology length, and homology GC content, for each deletion-type repair outcome for every target sequence.
   del_features = master_data['del_features']
+
   # merged counts and del_features
   data = pd.concat((counts, del_features), axis=1)
+
   # Unpack data from e11_dataset
   # mh_lens contains as many entries as exps, each entry is an ARRAY containing all the 
   # microhomology length in the dataset for that exp/target sequency, similarly 
@@ -329,6 +338,8 @@ if __name__ == '__main__':
   # relative GC conten observed. For the same target sequence we can observe different microhomologies
   # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv  
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
+
+  
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
     #mhl and gcf are both arrays
@@ -342,6 +353,8 @@ if __name__ == '__main__':
   NAMES = np.array([str(s) for s in exps])
   DEL_LENS = np.array(del_lens)
 
+
+
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
   ut.save_train_test_names(NAMES_train, NAMES_test, out_dir)
@@ -350,7 +363,7 @@ if __name__ == '__main__':
   Training parameters
   '''
   param_scale = 0.1
-  num_epochs = 30
+  num_epochs = 10
   step_size = 0.10
 
   init_nn_params = init_random_params(param_scale, nn_layer_sizes, rs = seed)
@@ -401,6 +414,6 @@ if __name__ == '__main__':
 
   print('Start kNN training')
   save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
-  test = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')  
-  print(test)
+  knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
+  train_knn(knn_features, data.reset_index())
   print('kNN features successfully calculated!')
