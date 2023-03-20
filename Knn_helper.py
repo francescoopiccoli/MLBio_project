@@ -89,7 +89,7 @@ def generate_models(X, Y, bp_stats, Normalizer):
   # Train rate model
   model = KNeighborsRegressor()
   model.fit(X, Y)
-  with open(out_dir + 'rate_model_v2.pkl', 'w') as f:
+  with open(out_dir + 'rate_model_v2.pkl', 'wb') as f:
     pickle.dump(model, f)
 
   # Obtain bp stats
