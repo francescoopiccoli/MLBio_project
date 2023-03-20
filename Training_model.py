@@ -15,7 +15,7 @@ from scipy.stats import entropy
 from sklearn.model_selection import train_test_split
 from matplotlib.backends.backend_pdf import PdfPages 
 import matplotlib.patches as mpatches
-from Knn_helper import *
+from Knn_helper import train_knn
 import utilities as ut
 import forward_step as fw
 import backprop as bp
