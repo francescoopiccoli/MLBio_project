@@ -2,7 +2,7 @@
 
 from __future__ import division
 #import _config, _lib, _data, _predict, _predict2
-import sys, os
+import sys, os, pickle
 import numpy as np
 from collections import defaultdict
 from mylib import util
@@ -306,12 +306,11 @@ def train_knn(knn_features, data_nm):
   global out_dir
   util.ensure_dir_exists(out_dir)
 
-  #import fk_1bpins
-
-  
+ 
   all_rate_stats = pd.DataFrame()
   all_bp_stats = pd.DataFrame()  
 
+  #TODO: Calculcate bp_stats correctly, need results from NNs
   rate_stats, bp_stats = prepare_statistics(data_nm)
   print(rate_stats.sample(n=5))
   print(bp_stats.sample(n=5))
