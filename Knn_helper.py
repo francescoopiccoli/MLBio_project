@@ -36,17 +36,12 @@ out_dir = out_place + out_letters + '/'
 ##
 # Functions
 ##
-"""def convert_oh_string_to_nparray(input):
-    input = input.replace('[', '').replace(']', '')
-    nums = input.split(' ')
-    return np.array([int(s) for s in nums])"""
+def convert_oh_string_to_nparray(input):
+    return np.array([int(s) for s in input])
 
 def featurize(rate_stats, Y_nm):
-    #fivebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Fivebase_OH']])
-    #threebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Threebase_OH']])
-    
-    fivebases = rate_stats['Fivebase_OH']
-    threebases = rate_stats['Threebase_OH']
+    fivebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Fivebase_OH']])
+    threebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Threebase_OH']])
 
     total_del_phis = np.array(rate_stats['total_del_phi']).reshape(len(rate_stats['total_del_phi']), 1)
     precision_scores_dl = np.array(rate_stats['precision_score_dl']).reshape(len(rate_stats['precision_score_dl']), 1)
@@ -68,7 +63,8 @@ def featurize(rate_stats, Y_nm):
                   (np.mean(precision_scores_dl),
                       np.std(precision_scores_dl)),
                  ]
-
+    print(type(fivebases))
+    print(fivebases.T)
     fiveG = (fivebases.T[2] - np.mean(fivebases.T[2])) / np.std(fivebases.T[2])
     fiveT = (fivebases.T[3] - np.mean(fivebases.T[3])) / np.std(fivebases.T[3])
     threeA = (threebases.T[0] - np.mean(threebases.T[0])) / np.std(threebases.T[0])
