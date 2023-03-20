@@ -363,7 +363,7 @@ if __name__ == '__main__':
   Training parameters
   '''
   param_scale = 0.1
-  num_epochs = 30
+  num_epochs = 10
   step_size = 0.10
 
   init_nn_params = init_random_params(param_scale, nn_layer_sizes, rs = seed)
@@ -414,6 +414,6 @@ if __name__ == '__main__':
 
   print('Start kNN training')
   save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
-  test = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')  
-  print(test)
+  knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
+  train_knn(knn_features, data.reset_index())
   print('kNN features successfully calculated!')

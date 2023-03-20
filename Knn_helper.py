@@ -36,17 +36,20 @@ out_dir = out_place + out_letters + '/'
 ##
 # Functions
 ##
-def convert_oh_string_to_nparray(input):
+"""def convert_oh_string_to_nparray(input):
     input = input.replace('[', '').replace(']', '')
     nums = input.split(' ')
-    return np.array([int(s) for s in nums])
+    return np.array([int(s) for s in nums])"""
 
 def featurize(rate_stats, Y_nm):
-    fivebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Fivebase_OH']])
-    threebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Threebase_OH']])
+    #fivebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Fivebase_OH']])
+    #threebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Threebase_OH']])
+    
+    fivebases = rate_stats['Fivebase_OH']
+    threebases = rate_stats['Threebase_OH']
 
     total_del_phis = np.array(rate_stats['total_del_phi']).reshape(len(rate_stats['total_del_phi']), 1)
-    precision_scores_dl = np.array(rate_stats['Del precision_scores_dl']).reshape(len(rate_stats['precision_scores_dl']), 1)
+    precision_scores_dl = np.array(rate_stats['precision_score_dl']).reshape(len(rate_stats['precision_score_dl']), 1)
     print(total_del_phis.shape, fivebases.shape, precision_scores_dl.shape)
 
     Y = np.array(rate_stats[Y_nm])
@@ -75,8 +78,8 @@ def featurize(rate_stats, Y_nm):
     total_del_phis = (total_del_phis - np.mean(total_del_phis)) / np.std(total_del_phis)
     precision_scores_dl = (precision_scores_dl - np.mean(precision_scores_dl)) / np.std(precision_scores_dl)
 
-    X = np.concatenate(( gtag, total_del_phis, precision_scores_dl), axis = 1)
-    feature_names = ['5G', '5T', '3A', '3G', 'Entropy', 'DelScore']
+    X = np.concatenate((gtag, total_del_phis, precision_scores_dl), axis=1)
+    feature_names = ['5G', '5T', '3A', '3G', 'total_del_phi', 'precision_scores_dl']
     print('Num. samples: %s, num. features: %s' % X.shape)
 
     return X, Y, Normalizer
@@ -125,7 +128,7 @@ def generate_models(X, Y, bp_stats, Normalizer):
 def calc_statistics(df, exp, alldf_dict):
   # Calculate statistics on df, saving to alldf_dict
   # Deletion positions
-
+  alldf_dict['exp'].append(exp)
 
   #Should be always 1
   editing_rate = 1
@@ -187,8 +190,6 @@ def calc_statistics(df, exp, alldf_dict):
     threebase_oh = np.array([0, 0, 0, 1])
   alldf_dict['Threebase_OH'].append(threebase_oh)
 
-  alldf_dict['_Experiment'].append(exp)
-
   return alldf_dict
 
 def prepare_statistics(count_and_deletion_df):
@@ -201,16 +202,12 @@ def prepare_statistics(count_and_deletion_df):
   alldf_dict_1bp = defaultdict(list)
 
   timer = util.Timer(total = len(count_and_deletion_df))
-
-  #TODO: Not sure if this is the idea?
-  insertion_data = count_and_deletion_df[count_and_deletion_df['Type'] == 'INSERTION'].reset_index()
-
+  
   # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = insertion_data['Sample_Name'].unique()[:10]
-
+  exps = count_and_deletion_df['Sample_Name'].unique()[:10]
   for exp in exps:
     all_data = count_and_deletion_df[count_and_deletion_df['Sample_Name'] == exp]
-    ins_data = insertion_data[insertion_data['Sample_Name'] == exp]
+    #ins_data = insertion_data[insertion_data['Sample_Name'] == exp]
     print("seq: " + exp)
     calc_statistics(all_data, exp, alldf_dict)
     # calc_statistics_1bp(ins_data, exp, alldf_dict_1bp)
@@ -240,7 +237,7 @@ def train_knn(knn_features, count_and_deletion_df):
   #TODO: Calculcate bp_stats correctly, need results from NNs
   rate_stats, bp_stats = prepare_statistics(count_and_deletion_df)
   print(rate_stats.sample(n=5))
-  print(bp_stats.sample(n=5))
+  #print(bp_stats.sample(n=5))
   
 
   print(all_rate_stats)  
