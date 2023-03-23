@@ -199,14 +199,14 @@ def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
   precision = 1 - norm_entropy
   log_phi_score = np.log(total_phi_score)
 
-  fiveohmapper = {'A': [1, 0, 0, 0], 
-                  'C': [0, 1, 0, 0], 
-                  'G': [0, 0, 1, 0], 
-                  'T': [0, 0, 0, 1]}
-  threeohmapper = {'A': [1, 0, 0, 0], 
-                   'C': [0, 1, 0, 0], 
-                   'G': [0, 0, 1, 0], 
-                   'T': [0, 0, 0, 1]}
+  fiveohmapper = {'A': [0, 0], 
+                  'C': [0, 0], 
+                  'G': [1, 0], 
+                  'T': [0, 1]}
+  threeohmapper = {'A': [1, 0], 
+                   'C': [0, 0], 
+                   'G': [0, 1], 
+                   'T': [0, 0]}
   fivebase = seq[cutsite - 1]
   threebase = seq[cutsite]
   onebp_features = fiveohmapper[fivebase] + threeohmapper[threebase] + [precision] + [log_phi_score]
@@ -220,26 +220,18 @@ def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
 
   # Predict 1 bp genotype frequencies
   pred_1bpins_d = defaultdict(list)
-  negfivebase = seq[cutsite - 2]
-  negfourbase = seq[cutsite - 1]
-  negthreebase = seq[cutsite]
 
-  if CELLTYPE in ['mESC', 'U2OS']:
-    for ins_base in bp_model[negfivebase][negfourbase][negthreebase]:
-      freq = bp_model[negfivebase][negfourbase][negthreebase][ins_base]
+  if CELLTYPE in ['mESC']:
+    for ins_base in bp_model[fivebase]:
+      freq = bp_model[fivebase][threebase]
       freq *= rate_1bpins / (1 - rate_1bpins)
       pred_1bpins_d['Category'].append('ins')
       pred_1bpins_d['Length'].append(1)
       pred_1bpins_d['Inserted Bases'].append(ins_base)
       pred_1bpins_d['Predicted frequency'].append(freq)
   elif CELLTYPE in ['HEK293', 'HCT116', 'K562']:
-    for ins_base in bp_model[negfourbase]:
-      freq = bp_model[negfourbase][ins_base]
-      freq *= rate_1bpins / (1 - rate_1bpins)
-      pred_1bpins_d['Category'].append('ins')
-      pred_1bpins_d['Length'].append(1)
-      pred_1bpins_d['Inserted Bases'].append(ins_base)
-      pred_1bpins_d['Predicted frequency'].append(freq)
+    print("wrong")
+    return
 
   pred_1bpins_df = pd.DataFrame(pred_1bpins_d)
   pred_df = pred_del_df.append(pred_1bpins_df, ignore_index = True)

@@ -9,5 +9,5 @@ seq = left_seq + right_seq
 cutsite = len(left_seq)
 
 pred_df, stats = inDelphi.predict(seq, cutsite)
-
-print(seq)
+print(pred_df)
+print(stats)
