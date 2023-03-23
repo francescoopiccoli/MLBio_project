@@ -43,8 +43,8 @@ def featurize(rate_stats, Y_nm):
     fivebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Fivebase_OH']])
     threebases = np.array([convert_oh_string_to_nparray(s) for s in rate_stats['Threebase_OH']])
 
-    total_del_phis = np.array(rate_stats['total_del_phi']).reshape(len(rate_stats['total_del_phi']), 1)
-    precision_scores_dl = np.array(rate_stats['precision_score_dl']).reshape(len(rate_stats['precision_score_dl']), 1)
+    ent = np.array(rate_stats['Entropy']).reshape(len(rate_stats['Entropy']), 1)
+    del_scores = np.array(rate_stats['Del Score']).reshape(len(rate_stats['Del Score']), 1)
 
     Y = np.array(rate_stats[Y_nm])
     
@@ -56,31 +56,30 @@ def featurize(rate_stats, Y_nm):
                       np.std(threebases.T[0])),
                   (np.mean(threebases.T[2]),
                       np.std(threebases.T[2])),
-                  (np.mean(total_del_phis),
-                      np.std(total_del_phis)),
-                  (np.mean(precision_scores_dl),
-                      np.std(precision_scores_dl)),
+                  (np.mean(ent),
+                      np.std(ent)),
+                  (np.mean(del_scores),
+                      np.std(del_scores)),
                  ]
-  
+
     fiveG = (fivebases.T[2] - np.mean(fivebases.T[2])) / np.std(fivebases.T[2])
     fiveT = (fivebases.T[3] - np.mean(fivebases.T[3])) / np.std(fivebases.T[3])
     threeA = (threebases.T[0] - np.mean(threebases.T[0])) / np.std(threebases.T[0])
     threeG = (threebases.T[2] - np.mean(threebases.T[2])) / np.std(threebases.T[2])
     gtag = np.array([fiveG, fiveT, threeA, threeG]).T
 
-    total_del_phis = (total_del_phis - np.mean(total_del_phis)) / np.std(total_del_phis)
-    precision_scores_dl = (precision_scores_dl - np.mean(precision_scores_dl)) / np.std(precision_scores_dl)
+    ent = (ent - np.mean(ent)) / np.std(ent)
+    del_scores = (del_scores - np.mean(del_scores)) / np.std(del_scores)
 
-    X = np.concatenate((gtag, total_del_phis, precision_scores_dl), axis=1)
-    feature_names = ['5G', '5T', '3A', '3G', 'total_del_phi', 'precision_scores_dl']
-    print('Num. samples: %s, num. features: %s' % X.shape)
+    X = np.concatenate(( gtag, ent, del_scores), axis = 1)
+    X = np.concatenate(( gtag, ent, del_scores), axis = 1)
+    feature_names = ['5G', '5T', '3A', '3G', 'Entropy', 'DelScore']
 
     return X, Y, Normalizer
 
 ##
 # Train KNN model, X=training data, Y=target values, bp_stats
 ##
-
 def generate_models(X, Y, bp_stats, Normalizer):
   # Train rate model
   model = KNeighborsRegressor()
@@ -92,7 +91,7 @@ def generate_models(X, Y, bp_stats, Normalizer):
   bp_model = dict()
   ins_bases = ['A frac', 'C frac', 'G frac', 'T frac']
   t_melt = pd.melt(bp_stats, 
-                   id_vars = ['Fivebase'], 
+                   id_vars = ['Base'], 
                    value_vars = ins_bases, 
                    var_name = 'Ins Base', 
                    value_name = 'Fraction')
@@ -100,15 +99,10 @@ def generate_models(X, Y, bp_stats, Normalizer):
     bp_model[base] = dict()
     mean_vals = []
     for ins_base in ins_bases:
-      crit = (t_melt['Fivebase'] == base) & (t_melt['Ins Base'] == ins_base)
+      crit = (t_melt['Base'] == base) & (t_melt['Ins Base'] == ins_base)
       mean_vals.append(float(np.mean(t_melt[crit])))
     for bp, freq in zip(list('ACGT'), mean_vals):
-      # I added this if to avoid the error: ZeroDivisionError: float division by zero 
-      # The fact that this was not there in the original code, makes me think that the error was not occurring in the original code
-      if sum(mean_vals) != 0:
-        bp_model[base][bp] = freq / sum(mean_vals)
-      else:
-        bp_model[base][bp] = 0
+      bp_model[base][bp] = freq / sum(mean_vals)
 
   with open(out_dir + 'bp_model_v2.pkl', 'wb') as f:
     pickle.dump(bp_model, f)
@@ -118,44 +112,55 @@ def generate_models(X, Y, bp_stats, Normalizer):
 
   return
 
+##
+# Prepare statistics
+##
+def prepare_statistics(knn_features, count_and_deletion_df):
+  # Input: Dataset
+  # Output: Uniformly processed dataset, requiring minimal processing for plotting but ideally enabling multiple plots
+  # Calculate statistics associated with each experiment by name
+
+  alldf_dict = defaultdict(list)
+  alldf_dict_1bp = defaultdict(list)
+
+  exps = count_and_deletion_df['Sample_Name'].unique()[:10]
+  timer = util.Timer(total = len(exps))
+  
+  for exp in exps:
+    all_data = count_and_deletion_df[count_and_deletion_df['Sample_Name'] == exp]
+    all_data["Frequency"] = all_data["countEvents"] / sum(all_data["countEvents"])
+    ins_data = all_data[(all_data['Type'] == 'INSERTION') & (all_data['Indel'].str.startswith('1+'))]
+  
+    calc_statistics(all_data, exp, alldf_dict, count_and_deletion_df, knn_features)
+    calc_statistics_1bp(ins_data, exp, alldf_dict_1bp)
+    timer.update()
+
+  # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
+  return pd.DataFrame(alldf_dict), pd.DataFrame(alldf_dict_1bp)
 
 ##
 # Run statistics
 ##
-def calc_statistics(df, exp, alldf_dict):
+def calc_statistics(df, exp, alldf_dict, count_and_deletion_df, knn_features):
+  if sum(df['countEvents']) <= 1000: return
+
   # Calculate statistics on df, saving to alldf_dict
   # Deletion positions
-  alldf_dict['exp'].append(exp)
+  alldf_dict['_Experiment'].append(exp)
 
-  #Should be always 1
+  # Equals to 1 due to absence of noise in our dataset
   editing_rate = 1
   alldf_dict['Editing Rate'].append(editing_rate)
 
-
-  # # Denominator is ins
-  # if sum(_lib.crispr_subset(df)['Count']) <= 1000:
-  #   return
-
-  # editing_rate = sum(_lib.crispr_subset(df)['Count']) / sum(_lib.notnoise_subset(df)['Count'])
-  # alldf_dict['Editing Rate'].append(editing_rate)
-
-
-  ins_criteria = (df['Type'] == 'INSERTION') # & (dcount_and_deletion_dff['Length'] == 1)
+  ins_criteria = (df['Type'] == 'INSERTION') & (df['Indel'].str.startswith('1+'))
   ins_count = sum(df[ins_criteria]['countEvents'])
-
   del_criteria = (df['Type'] == 'DELETION')
   del_count = sum(df[del_criteria]['countEvents'])
-
-  # TODO: Necessary? Why?
-  # if del_count == 0:
-    # return
-
+  mhdel_count = sum(df[(df['Type'] == 'DELETION') & (df['homologyLength'] != 0)]['countEvents'])
   alldf_dict['Ins1bp/Del Ratio'].append(ins_count / (del_count + ins_count))
+  alldf_dict['Ins1bp/MHDel Ratio'].append(ins_count / (mhdel_count + ins_count))
+  alldf_dict['Ins1bp Ratio'].append(ins_count / sum(df['countEvents']))
 
-  # Store the Fivebase and threebase in df
-  # Both normally and one-hot encoded
-
-  # TODO: This is hardcoded
   # Sample + sequence length is 28, (of which 20 for the sequence)
   cutsite = (int) (len(exp) - 10)
 
@@ -186,40 +191,25 @@ def calc_statistics(df, exp, alldf_dict):
     threebase_oh = np.array([0, 0, 0, 1])
   alldf_dict['Threebase_OH'].append(threebase_oh)
 
+  # Get deletion score and norm entropy
+  del_score = 0
+  norm_entropy = 0
+  if len(knn_features[knn_features['exp'] == exp]) > 0:
+    del_score = knn_features[knn_features['exp'] == exp]['total_del_phi'].values[0]
+    norm_entropy = knn_features[knn_features['exp'] == exp]['precision_score_dl'].values[0]
+  alldf_dict['Del Score'].append(del_score)
+  alldf_dict['Entropy'].append(norm_entropy)
+
   return alldf_dict
-
-def prepare_statistics(count_and_deletion_df):
-  # Input: Dataset
-  # Output: Uniformly processed dataset, requiring minimal processing for plotting but ideally enabling multiple plots
-  # Calculate statistics associated with each experiment by name
-
-  alldf_dict = defaultdict(list)
-
-  alldf_dict_1bp = defaultdict(list)
-
-  timer = util.Timer(total = len(count_and_deletion_df))
-  
-  # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = count_and_deletion_df['Sample_Name'].unique()[:10]
-  for exp in exps:
-    all_data = count_and_deletion_df[count_and_deletion_df['Sample_Name'] == exp]
-    # We get a warning for this: A value is trying to be set on a copy of a slice from a DataFrame. Try using .loc[row_indexer,col_indexer] = value instead
-    all_data["Frequency"] = all_data["countEvents"] / sum(all_data["countEvents"])
-    ins_data = all_data[(all_data['Type'] == 'INSERTION') & (all_data['Indel'].str.startswith('1+'))]
-    print("seq: " + exp)
-  
-    calc_statistics(all_data, exp, alldf_dict)
-    calc_statistics_1bp(ins_data, exp, alldf_dict_1bp)
-    timer.update()
-
-  # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
-  return pd.DataFrame(alldf_dict), pd.DataFrame(alldf_dict_1bp)
 
 ##
 # Run statistics
 ##
 def calc_statistics_1bp(df, exp, alldf_dict):
-  alldf_dict['exp'].append(exp)
+  if sum(df['countEvents']) <= 100:
+    return
+  
+  alldf_dict['_Experiment'].append(exp)
   onebp_freq = sum(df['Frequency'])
   try:
     a_frac = sum(df[df['Indel'].str.endswith('A')]['Frequency']) / onebp_freq
@@ -248,12 +238,9 @@ def calc_statistics_1bp(df, exp, alldf_dict):
   cutsite = (int) (len(exp) - 10)
   # Get fifth base and encode it
   fivebase = exp[cutsite - 1]
-  alldf_dict['Fivebase'].append(fivebase)
+  alldf_dict['Base'].append(fivebase)
 
   return alldf_dict
-  
-
-
 
 ##
 # Train the KNN model
@@ -263,25 +250,10 @@ def train_knn(knn_features, count_and_deletion_df):
   global out_dir
   util.ensure_dir_exists(out_dir)
 
- 
-  all_rate_stats = pd.DataFrame()
-  all_bp_stats = pd.DataFrame()  
+  rate_stats, bp_stats = prepare_statistics(knn_features, count_and_deletion_df)
+  rate_stats = rate_stats[rate_stats['Entropy'] > 0.01]
 
-  #TODO: Calculcate bp_stats correctly, need results from NNs
-  rate_stats, bp_stats = prepare_statistics(count_and_deletion_df)
-  print(rate_stats)
-  print(bp_stats)
-  
-  all_rate_stats = all_rate_stats.append(rate_stats, ignore_index = True)
-  all_bp_stats = all_bp_stats.append(bp_stats, ignore_index = True)
-
-  #TODO: Get Entropy somehow?
-  # rate_stats = rate_stats[rate_stats['Entropy'] > 0.01]
-  
-  # Check better the output of this merge operation
-  all_rate_stats = pd.merge(all_rate_stats, knn_features, left_on='exp', right_on='exp', how='left')
-
-  X, Y, Normalizer = featurize(all_rate_stats, 'Ins1bp/Del Ratio')
-  generate_models(X, Y, all_bp_stats, Normalizer)
+  X, Y, Normalizer = featurize(rate_stats, 'Ins1bp/Del Ratio')
+  generate_models(X, Y, bp_stats, Normalizer)
 
   return

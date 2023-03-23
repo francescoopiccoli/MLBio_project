@@ -303,7 +303,6 @@ if __name__ == '__main__':
   log_fn = out_dir + '_log_%s.out' % (out_letters)
   with open(log_fn, 'w') as f:
     pass
-  ut.print_and_log('out dir: ' + out_letters, log_fn)
 
   counter = 0
   seed = npr.RandomState(1)
