@@ -330,6 +330,7 @@ def predict(seq, cutsite):
 ##
 # Process predictions
 ##
+# Not used
 def get_frameshift_fqs(pred_df):
   # Returns a dataframe
   #   - Frame
@@ -375,18 +376,21 @@ def get_indel_length_fqs(pred_df):
   df = pd.DataFrame(d)
   return df  
 
+# Not used
 def get_highest_frequency_indel(pred_df):
   # Returns a row of pred_df
   highest_fq = max(pred_df['Predicted frequency'])
   row = pred_df[pred_df['Predicted frequency'] == highest_fq]
   return row.iloc[0]
 
+# Not used
 def get_highest_frequency_length(pred_df):
   idd = get_indel_length_fqs(pred_df)
   highest_fq = max(idd['Predicted frequency'])
   row = idd[idd['Predicted frequency'] == highest_fq]
   return row.iloc[0]
 
+# Not used
 def get_precision(pred_df):
   # Returns a row of pred_df
   return 1 - entropy(pred_df['Predicted frequency']) / np.log(len(pred_df))
@@ -419,6 +423,7 @@ def add_genotype_column(pred_df, stats):
   new_pred_df['Genotype'] = gts
   return new_pred_df
 
+# Not used
 def add_name_column(pred_df, stats):
   names = []
   seq = stats['Reference sequence'].iloc[0]
@@ -439,6 +444,7 @@ def add_name_column(pred_df, stats):
   pred_df['Name'] = names
   return
 
+# Not used
 def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
   # Adds genotype-resolution predictions for MH-less genotypes
   # Be wary: MH-less genotypes have much lower replicability than
@@ -513,14 +519,12 @@ def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
 ##
 # Init
 ##
-def init_model(run_iter = 'aax', 
-               param_iter = 'aag', 
-               celltype = 'mESC'):
+def init_model(celltype = 'mESC'):
   global init_flag
   if init_flag != False:
     return
 
-  print('Initializing model %s/%s, %s...' % (run_iter, param_iter, celltype))
+  print('Initializing model, %s...' % (celltype))
 
   model_dir = os.path.dirname(os.path.realpath(__file__))
   model_dir += '/model-mlbio'
