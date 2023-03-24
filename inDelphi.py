@@ -223,7 +223,7 @@ def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
 
   if CELLTYPE in ['mESC']:
     for ins_base in bp_model[fivebase]:
-      freq = bp_model[fivebase][threebase]
+      freq = bp_model[fivebase][ins_base]
       freq *= rate_1bpins / (1 - rate_1bpins)
       pred_1bpins_d['Category'].append('ins')
       pred_1bpins_d['Length'].append(1)
