@@ -303,7 +303,6 @@ if __name__ == '__main__':
   log_fn = out_dir + '_log_%s.out' % (out_letters)
   with open(log_fn, 'w') as f:
     pass
-  ut.print_and_log('out dir: ' + out_letters, log_fn)
 
   counter = 0
   seed = npr.RandomState(1)
@@ -363,7 +362,7 @@ if __name__ == '__main__':
   Training parameters
   '''
   param_scale = 0.1
-  num_epochs = 10
+  num_epochs = 2
   step_size = 0.10
 
   init_nn_params = init_random_params(param_scale, nn_layer_sizes, rs = seed)
