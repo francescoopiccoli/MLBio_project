@@ -251,7 +251,7 @@ def parse_input_data(data):
   exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = deletions_data['Sample_Name'].unique()[:10]
+  exps = deletions_data['Sample_Name'].unique()
 
   # Microhomology data has the homology length greater than 0
   mh_data = deletions_data[deletions_data['homologyLength'] != 0]
@@ -401,7 +401,7 @@ if __name__ == '__main__':
         # plot_pred_obs(nn_params, nn2_params, INP_test, OBS_test, DEL_LENS_test, NAMES_test, 'test', letters)
 
     return None
-
+  """
   optimized_params = bp.adam_minmin(both_objective_grad,
                                   init_nn_params, 
                                   init_nn2_params, 
@@ -414,5 +414,6 @@ if __name__ == '__main__':
   print('Start kNN training')
   save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
   knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
-  train_knn(knn_features, data.reset_index())
+  """
+  train_knn(data.reset_index())
   print('kNN features successfully calculated!')
