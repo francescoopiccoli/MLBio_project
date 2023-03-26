@@ -1,14 +1,39 @@
 from inDelphiModel import inDelphi
+import pandas as pd
 
 inDelphi.init_model(celltype = 'mESC')
 
-left_seq = 'AGAATCGCCCGCGGTCCATCCTTTATCAGCGGGAATTCAAGCGCACCAGCCAGAGGTGTA'
-right_seq = 'CCGTGGACGTGAGAAAGAAGAAACATAATATTCGCACTAGATCCATCCCCATACCTGACC'
-seq = left_seq + right_seq
-cutsite = len(left_seq)
 
-pred_df, stats = inDelphi.predict(seq, cutsite)
+# Generate figure 1e
+def generate_figure_1e(sequence, cutsite):
+
+    
 
 
-print(pred_df)
-print(stats)
+    pred_df, stats = inDelphi.predict(sequence, cutsite)
+
+    # Adds a genotype colum
+    pred_df = inDelphi.add_genotype_column(pred_df, stats)
+
+    print(pred_df['Genotype'])
+    print(stats)
+
+
+
+
+def generate_figure_3f(predictions):
+
+    pass
+  # Get highest ins rate for each sequence
+
+  # Get highest deletion rate for each sequence
+
+  # Plot them
+
+if __name__ == '__main__':
+    left_seq = 'AGAATCGCCCGCGGTCCATCCTTTATCAGCGGGAATTCAAGCGCACCAGCCAGAGGTGTA'
+    right_seq = 'CCGTGGACGTGAGAAAGAAGAAACATAATATTCGCACTAGATCCATCCCCATACCTGACC'
+    seq = left_seq + right_seq
+    cutsite = len(left_seq)
+
+    generate_figure_1e(seq, cutsite)
