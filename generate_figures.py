@@ -1,5 +1,6 @@
 from inDelphiModel import inDelphi
 import pandas as pd
+import numpy as np
 
 # Generate figure 1e
 def generate_figure_1e(sequence, cutsite):
@@ -13,9 +14,16 @@ def generate_figure_1e(sequence, cutsite):
 
     # Adds a genotype colum
     pred_df = inDelphi.add_genotype_column(pred_df, stats)
-    
+
+    # Need because of python version
+    pred_df = pred_df.rename(columns={'Genotype position': 'Genotype_position'})
+
+    # Correctly identify mh-less deletions
+    query = '(Category == \'del\') & (1 <= Length <= 60) & (0 <= Genotype_position <= Length)'
+    pred_df.loc[pred_df.query(query).index,'Category'] = "mh-less del"
+
     # Print data frame
-    print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(20)[['Genotype', 'Predicted frequency']].to_string(index=False))
+    print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(20)[['Genotype', 'Category', 'Predicted frequency']].to_string(index=False))
     # print(stats)
 
     pd.reset_option('display.max_rows')
