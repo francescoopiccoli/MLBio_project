@@ -524,7 +524,7 @@ def init_model(celltype = 'mESC'):
   print('Initializing model, %s...' % (celltype))
 
   model_dir = os.path.dirname(os.path.realpath(__file__))
-  model_dir += '/model-mlbio-2'
+  model_dir += '/model-mlbio'
 
   import sys
   def version_sensitive_pickle_load(f):
@@ -538,10 +538,10 @@ def init_model(celltype = 'mESC'):
 
   global nn_params
   global nn2_params
-  with open('%s/aak_nn.pkl' % (model_dir), 'rb') as f:
+  with open('%s/aae_nn.pkl' % (model_dir), 'rb') as f:
     # load in python3.6 a pickle that was dumped from python2.7
     nn_params = version_sensitive_pickle_load(f)
-  with open('%s/aak_nn2.pkl' % (model_dir), 'rb') as f:
+  with open('%s/aae_nn2.pkl' % (model_dir), 'rb') as f:
     nn2_params = version_sensitive_pickle_load(f)
 
   global normalizer
