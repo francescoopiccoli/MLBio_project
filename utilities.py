@@ -135,7 +135,6 @@ def save_test_targets(test_exps):
     sp = str.split(exp, "_")
     grna = sp[-1]
     if grna in names_and_targets:
-      print([grna, names_and_targets[grna]])
       exps_targets.append([sp[-1], names_and_targets[grna]])
 
   with open('output_test/test_targets.csv', 'w') as f:
