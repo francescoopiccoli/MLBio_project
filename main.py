@@ -1,8 +1,16 @@
 import sys
 import os
 import numpy
+import csv
 import inDelphi
 import pandas as pd
+
+# From Boris: load test targets
+test_targets = {}
+with open('output_test/test_targets.csv') as file:
+    csvreader = csv.reader(file)
+    for row in csvreader:
+        test_targets[row[0]] = row[1]
 
 left_seq = 'AGAATCGCCCGCGGTCCATCCTTTATCAGCGGGAATTCAAGCGCACCAGCCAGAGGTGTA'
 right_seq = 'CCGTGGACGTGAGAAAGAAGAAACATAATATTCGCACTAGATCCATCCCCATACCTGACC'

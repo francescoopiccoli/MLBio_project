@@ -51,7 +51,7 @@ def __find_microhomologies(left, right):
   mhs.append(mh)
   return mhs
 
-def __featurize(seq, cutsite, DELLEN_LIMIT = 60):
+def __featurize(seq, cutsite, DELLEN_LIMIT = 28 + 1):
   # print('Using DELLEN_LIMIT = %s' % (DELLEN_LIMIT))
   mh_lens, gc_fracs, gt_poss, del_lens = [], [], [], []
   for del_len in range(1, DELLEN_LIMIT):
@@ -154,7 +154,7 @@ def __predict_dels(seq, cutsite):
   pred_mhless_d = defaultdict(list)
   # Include MH-less contributions at non-full MH deletion lengths
   nonfull_dls = []
-  for dl in range(1, 60):
+  for dl in range(1, 28 + 1):
     if dl not in del_len:
       nonfull_dls.append(dl)
     elif del_len.count(dl) == 1:
@@ -183,6 +183,7 @@ def __predict_dels(seq, cutsite):
   pred_del_df = pd.DataFrame(d)
   pred_del_df['Category'] = 'del'
   return pred_del_df, total_phi_score
+  
 
 def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
   ################################################################
@@ -210,8 +211,7 @@ def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
   fivebase = seq[cutsite - 1]
   threebase = seq[cutsite]
   onebp_features = fiveohmapper[fivebase] + threeohmapper[threebase] + [precision] + [log_phi_score]
-  print(len(onebp_features))
-  print(len(normalizer))
+
   for idx in range(len(onebp_features)):
     val = onebp_features[idx]
     onebp_features[idx] = (val - normalizer[idx][0]) / normalizer[idx][1]
@@ -229,9 +229,6 @@ def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
       pred_1bpins_d['Length'].append(1)
       pred_1bpins_d['Inserted Bases'].append(ins_base)
       pred_1bpins_d['Predicted frequency'].append(freq)
-  elif CELLTYPE in ['HEK293', 'HCT116', 'K562']:
-    print("wrong")
-    return
 
   pred_1bpins_df = pd.DataFrame(pred_1bpins_d)
   pred_df = pred_del_df.append(pred_1bpins_df, ignore_index = True)
@@ -527,7 +524,7 @@ def init_model(celltype = 'mESC'):
   print('Initializing model, %s...' % (celltype))
 
   model_dir = os.path.dirname(os.path.realpath(__file__))
-  model_dir += '/model-mlbio'
+  model_dir += '/model-mlbio-2'
 
   import sys
   def version_sensitive_pickle_load(f):
@@ -541,10 +538,10 @@ def init_model(celltype = 'mESC'):
 
   global nn_params
   global nn2_params
-  with open('%s/aae_nn.pkl' % (model_dir), 'rb') as f:
+  with open('%s/aak_nn.pkl' % (model_dir), 'rb') as f:
     # load in python3.6 a pickle that was dumped from python2.7
     nn_params = version_sensitive_pickle_load(f)
-  with open('%s/aae_nn2.pkl' % (model_dir), 'rb') as f:
+  with open('%s/aak_nn2.pkl' % (model_dir), 'rb') as f:
     nn2_params = version_sensitive_pickle_load(f)
 
   global normalizer
