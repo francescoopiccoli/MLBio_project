@@ -123,19 +123,20 @@ def save_train_test_names(train_nms, test_nms, out_dir):
 def save_test_targets(test_exps):
   # Save targets for each exp
   names_and_targets = {}
-  with open('names-libA.txt') as names, open('targets-libA.txt') as targets:
-    valid_names = names.readlines()
+  with open('grna-libA.txt') as guides, open('targets-libA.txt') as targets:
+    valid_guides = guides.readlines()
     valid_targets = targets.readlines()
 
-    for i, line in enumerate(valid_names):
+    for i, line in enumerate(valid_guides):
       names_and_targets[line[:-1]] = valid_targets[i][:-1]
 
   exps_targets = []
   for exp in test_exps:
     sp = str.split(exp, "_")
-    name = "_".join(sp[:-1])
-    if name in names_and_targets:
-      exps_targets.append([sp[-1], names_and_targets[name]])
+    grna = sp[-1]
+    if grna in names_and_targets:
+      print([grna, names_and_targets[grna]])
+      exps_targets.append([sp[-1], names_and_targets[grna]])
 
   with open('output_test/test_targets.csv', 'w') as f:
     write = csv.writer(f)
