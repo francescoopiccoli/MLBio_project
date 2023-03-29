@@ -72,7 +72,6 @@ def featurize(rate_stats, Y_nm):
     del_scores = (del_scores - np.mean(del_scores)) / np.std(del_scores)
 
     X = np.concatenate(( gtag, ent, del_scores), axis = 1)
-    X = np.concatenate(( gtag, ent, del_scores), axis = 1)
     feature_names = ['5G', '5T', '3A', '3G', 'Entropy', 'DelScore']
 
     return X, Y, Normalizer
@@ -123,16 +122,14 @@ def prepare_statistics(knn_features, count_and_deletion_df):
   alldf_dict = defaultdict(list)
   alldf_dict_1bp = defaultdict(list)
 
-  exps = count_and_deletion_df['Sample_Name'].unique()[:10]
+  exps = count_and_deletion_df['Sample_Name'].unique()
   timer = util.Timer(total = len(exps))
   
   for exp in exps:
-    all_data = count_and_deletion_df[count_and_deletion_df['Sample_Name'] == exp]
-    all_data["Frequency"] = all_data["countEvents"] / sum(all_data["countEvents"])
-    ins_data = all_data[(all_data['Type'] == 'INSERTION') & (all_data['Indel'].str.startswith('1+'))]
+    exp_data = count_and_deletion_df[count_and_deletion_df['Sample_Name'] == exp]
   
-    calc_statistics(all_data, exp, alldf_dict, count_and_deletion_df, knn_features)
-    calc_statistics_1bp(ins_data, exp, alldf_dict_1bp)
+    calc_statistics(exp_data, exp, alldf_dict, count_and_deletion_df, knn_features)
+    calc_statistics_1bp(exp_data, exp, alldf_dict_1bp)
     timer.update()
 
   # Return a dataframe where columns are positions and rows are experiment names, values are frequencies
@@ -161,11 +158,8 @@ def calc_statistics(df, exp, alldf_dict, count_and_deletion_df, knn_features):
   alldf_dict['Ins1bp/MHDel Ratio'].append(ins_count / (mhdel_count + ins_count))
   alldf_dict['Ins1bp Ratio'].append(ins_count / sum(df['countEvents']))
 
-  # Sample + sequence length is 28, (of which 20 for the sequence)
-  cutsite = (int) (len(exp) - 10)
-
   # Get fifth base and encode it
-  fivebase = exp[cutsite - 1]
+  fivebase = exp[len(exp) - 4]
   alldf_dict['Fivebase'].append(fivebase)
 
   if fivebase == 'A':
@@ -179,7 +173,7 @@ def calc_statistics(df, exp, alldf_dict, count_and_deletion_df, knn_features):
   alldf_dict['Fivebase_OH'].append(fivebase_oh)
 
   # Get third base and encode it
-  threebase = exp[cutsite]
+  threebase = exp[len(exp) - 3]
   alldf_dict['Threebase'].append(threebase)
   if threebase == 'A':
     threebase_oh = np.array([1, 0, 0, 0])
@@ -206,6 +200,10 @@ def calc_statistics(df, exp, alldf_dict, count_and_deletion_df, knn_features):
 # Run statistics
 ##
 def calc_statistics_1bp(df, exp, alldf_dict):
+
+  df["Frequency"] = df["countEvents"] / sum(df["countEvents"])
+  df = df[(df['Type'] == 'INSERTION') & (df['Indel'].str.startswith('1+'))]
+  
   if sum(df['countEvents']) <= 100:
     return
   
@@ -235,25 +233,17 @@ def calc_statistics_1bp(df, exp, alldf_dict):
     t_frac = 0
   alldf_dict['T frac'].append(t_frac)
 
-  cutsite = (int) (len(exp) - 10)
   # Get fifth base and encode it
-  fivebase = exp[cutsite - 1]
+  fivebase = exp[len(exp) - 4]
   alldf_dict['Base'].append(fivebase)
-
   return alldf_dict
 
-##
-# Train the KNN model
-##
-def train_knn(knn_features, count_and_deletion_df):
+def train_knn(count_and_deletion_df, knn_features=pd.read_pickle("model-mlbio/knn_features_from_loss_function.pkl")):
   print('Generating KNN Model')
   global out_dir
   util.ensure_dir_exists(out_dir)
-
   rate_stats, bp_stats = prepare_statistics(knn_features, count_and_deletion_df)
   rate_stats = rate_stats[rate_stats['Entropy'] > 0.01]
 
   X, Y, Normalizer = featurize(rate_stats, 'Ins1bp/Del Ratio')
   generate_models(X, Y, bp_stats, Normalizer)
-
-  return

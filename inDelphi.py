@@ -51,7 +51,7 @@ def __find_microhomologies(left, right):
   mhs.append(mh)
   return mhs
 
-def __featurize(seq, cutsite, DELLEN_LIMIT = 60):
+def __featurize(seq, cutsite, DELLEN_LIMIT = 28 + 1):
   # print('Using DELLEN_LIMIT = %s' % (DELLEN_LIMIT))
   mh_lens, gc_fracs, gt_poss, del_lens = [], [], [], []
   for del_len in range(1, DELLEN_LIMIT):
@@ -154,7 +154,7 @@ def __predict_dels(seq, cutsite):
   pred_mhless_d = defaultdict(list)
   # Include MH-less contributions at non-full MH deletion lengths
   nonfull_dls = []
-  for dl in range(1, 60):
+  for dl in range(1, 28 + 1):
     if dl not in del_len:
       nonfull_dls.append(dl)
     elif del_len.count(dl) == 1:
@@ -183,6 +183,7 @@ def __predict_dels(seq, cutsite):
   pred_del_df = pd.DataFrame(d)
   pred_del_df['Category'] = 'del'
   return pred_del_df, total_phi_score
+  
 
 def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
   ################################################################
@@ -210,8 +211,7 @@ def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
   fivebase = seq[cutsite - 1]
   threebase = seq[cutsite]
   onebp_features = fiveohmapper[fivebase] + threeohmapper[threebase] + [precision] + [log_phi_score]
-  print(len(onebp_features))
-  print(len(normalizer))
+
   for idx in range(len(onebp_features)):
     val = onebp_features[idx]
     onebp_features[idx] = (val - normalizer[idx][0]) / normalizer[idx][1]
@@ -229,9 +229,6 @@ def __predict_ins(seq, cutsite, pred_del_df, total_phi_score):
       pred_1bpins_d['Length'].append(1)
       pred_1bpins_d['Inserted Bases'].append(ins_base)
       pred_1bpins_d['Predicted frequency'].append(freq)
-  elif CELLTYPE in ['HEK293', 'HCT116', 'K562']:
-    print("wrong")
-    return
 
   pred_1bpins_df = pd.DataFrame(pred_1bpins_d)
   pred_df = pred_del_df.append(pred_1bpins_df, ignore_index = True)
@@ -330,6 +327,7 @@ def predict(seq, cutsite):
 ##
 # Process predictions
 ##
+# Not used
 def get_frameshift_fqs(pred_df):
   # Returns a dataframe
   #   - Frame
@@ -375,18 +373,21 @@ def get_indel_length_fqs(pred_df):
   df = pd.DataFrame(d)
   return df  
 
+# Not used
 def get_highest_frequency_indel(pred_df):
   # Returns a row of pred_df
   highest_fq = max(pred_df['Predicted frequency'])
   row = pred_df[pred_df['Predicted frequency'] == highest_fq]
   return row.iloc[0]
 
+# Not used
 def get_highest_frequency_length(pred_df):
   idd = get_indel_length_fqs(pred_df)
   highest_fq = max(idd['Predicted frequency'])
   row = idd[idd['Predicted frequency'] == highest_fq]
   return row.iloc[0]
 
+# Not used
 def get_precision(pred_df):
   # Returns a row of pred_df
   return 1 - entropy(pred_df['Predicted frequency']) / np.log(len(pred_df))
@@ -419,6 +420,7 @@ def add_genotype_column(pred_df, stats):
   new_pred_df['Genotype'] = gts
   return new_pred_df
 
+# Not used
 def add_name_column(pred_df, stats):
   names = []
   seq = stats['Reference sequence'].iloc[0]
@@ -439,6 +441,7 @@ def add_name_column(pred_df, stats):
   pred_df['Name'] = names
   return
 
+# Not used
 def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
   # Adds genotype-resolution predictions for MH-less genotypes
   # Be wary: MH-less genotypes have much lower replicability than
@@ -513,14 +516,12 @@ def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
 ##
 # Init
 ##
-def init_model(run_iter = 'aax', 
-               param_iter = 'aag', 
-               celltype = 'mESC'):
+def init_model(celltype = 'mESC'):
   global init_flag
   if init_flag != False:
     return
 
-  print('Initializing model %s/%s, %s...' % (run_iter, param_iter, celltype))
+  print('Initializing model, %s...' % (celltype))
 
   model_dir = os.path.dirname(os.path.realpath(__file__))
   model_dir += '/model-mlbio'
