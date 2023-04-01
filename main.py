@@ -2,6 +2,7 @@ import sys
 import os
 import numpy
 import csv
+import math
 import inDelphi
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -29,7 +30,12 @@ for target in test_targets.values():
 
 
 # Make a histogram of the frequencies
-plt.hist(highest_del_freq_list, bins = 100)
+fig, ax = plt.subplots(1, 1)
+ax.hist(highest_del_freq_list, bins = 100)
+
+# Adds labels to the figure
+ax.set_xlabel('Most frequent deletion genotype prevelance')
+ax.set_ylabel('Number of gRNAs')
 plt.show()
 
 # pred_df, stats = inDelphi.predict(seq, cutsite)
