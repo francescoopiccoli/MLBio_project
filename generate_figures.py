@@ -1,4 +1,4 @@
-from inDelphiModel import inDelphi
+import inDelphi
 import pandas as pd
 from pandas.plotting import table 
 import numpy as np
