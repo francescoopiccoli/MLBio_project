@@ -2,7 +2,6 @@ import sys
 import os
 import numpy
 import csv
-import math
 import inDelphi
 import pandas as pd
 import matplotlib.pyplot as plt
