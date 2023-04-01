@@ -132,6 +132,7 @@ dmypy.json
 # macOS files
 .DS_Store
 
-# log directory
+# log directories
 outputaab/
 output/
+output_test/

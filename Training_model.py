@@ -251,7 +251,7 @@ def parse_input_data(data):
   exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = deletions_data['Sample_Name'].unique()[:10]
+  exps = deletions_data['Sample_Name'].unique()
 
   # Microhomology data has the homology length greater than 0
   mh_data = deletions_data[deletions_data['homologyLength'] != 0]
@@ -303,7 +303,6 @@ if __name__ == '__main__':
   log_fn = out_dir + '_log_%s.out' % (out_letters)
   with open(log_fn, 'w') as f:
     pass
-  ut.print_and_log('out dir: ' + out_letters, log_fn)
 
   counter = 0
   seed = npr.RandomState(1)
@@ -336,7 +335,7 @@ if __name__ == '__main__':
   # microhomology length in the dataset for that exp/target sequency, similarly 
   # gc_frac is an array of arrays, each array entry regards a specific target sequence and the 
   # relative GC conten observed. For the same target sequence we can observe different microhomologies
-  # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv  
+  # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
 
   
@@ -354,16 +353,16 @@ if __name__ == '__main__':
   DEL_LENS = np.array(del_lens)
 
 
-
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
   ut.save_train_test_names(NAMES_train, NAMES_test, out_dir)
+  ut.save_test_targets(NAMES_test)
   
   ''' 
   Training parameters
   '''
   param_scale = 0.1
-  num_epochs = 10
+  num_epochs = 50 + 1
   step_size = 0.10
 
   init_nn_params = init_random_params(param_scale, nn_layer_sizes, rs = seed)
@@ -402,18 +401,18 @@ if __name__ == '__main__':
         # plot_pred_obs(nn_params, nn2_params, INP_test, OBS_test, DEL_LENS_test, NAMES_test, 'test', letters)
 
     return None
+  
+  # optimized_params = bp.adam_minmin(both_objective_grad,
+  #                                 init_nn_params, 
+  #                                 init_nn2_params, 
+  #                                 step_size = step_size, 
+  #                                 num_iters = num_epochs,
+  #                                 callback = print_perf)
 
-  optimized_params = bp.adam_minmin(both_objective_grad,
-                                  init_nn_params, 
-                                  init_nn2_params, 
-                                  step_size = step_size, 
-                                  num_iters = num_epochs,
-                                  callback = print_perf)
+  # print('NN_1 and NN_2 successfully trained!')
 
-  print('NN_1 and NN_2 successfully trained!')
-
-  print('Start kNN training')
-  save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
-  knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
-  train_knn(knn_features, data.reset_index())
-  print('kNN features successfully calculated!')
+  # print('Start kNN training')
+  # save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
+  # knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
+  # train_knn(data.reset_index())
+  # print('kNN features successfully calculated!')

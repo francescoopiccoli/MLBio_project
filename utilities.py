@@ -9,6 +9,7 @@ from scipy.stats import pearsonr
 from collections import defaultdict
 from matplotlib.backends.backend_pdf import PdfPages 
 import forward_step as fw
+import csv
 from mylib import util
 
 
@@ -28,9 +29,8 @@ def count_num_folders(out_dir):
     assert os.path.isdir(out_dir + fold), 'Not a folder!'
   return len(os.listdir(out_dir))
 
-# TODO : Fix this
 def copy_script(out_dir):
-  src_dir = '/cluster/mshen/prj/mmej_figures/src/'
+  src_dir = ''
   script_nm = __file__
   subprocess.call('cp ' + src_dir + script_nm + ' ' + out_dir, shell = True)
   return
@@ -119,6 +119,27 @@ def save_train_test_names(train_nms, test_nms, out_dir):
     for i in range(len(test_nms)):
       f.write( ','.join([test_nms[i]]) + '\n' )
   return
+
+def save_test_targets(test_exps):
+  # Save targets for each exp
+  names_and_targets = {}
+  with open('grna-libA.txt') as guides, open('targets-libA.txt') as targets:
+    valid_guides = guides.readlines()
+    valid_targets = targets.readlines()
+
+    for i, line in enumerate(valid_guides):
+      names_and_targets[line[:-1]] = valid_targets[i][:-1]
+
+  exps_targets = []
+  for exp in test_exps:
+    sp = str.split(exp, "_")
+    grna = sp[-1]
+    if grna in names_and_targets:
+      exps_targets.append([sp[-1], names_and_targets[grna]])
+
+  with open('output_test/test_targets.csv', 'w') as f:
+    write = csv.writer(f)
+    write.writerows(exps_targets)
 
 def plot_mh_score_function(nn_params, out_dir, letters):
   data = defaultdict(list)
