@@ -35,7 +35,9 @@ ax.hist(highest_del_freq_list, bins = 100)
 # Adds labels to the figure
 ax.set_xlabel('Most frequent deletion genotype prevelance')
 ax.set_ylabel('Number of gRNAs')
-plt.show()
+
+# Save figure to output folder
+fig.savefig("output/figure_3f.png",dpi=300, bbox_inches = "tight")
 
 # pred_df, stats = inDelphi.predict(seq, cutsite)
 
