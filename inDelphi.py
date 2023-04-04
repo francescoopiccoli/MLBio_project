@@ -567,10 +567,13 @@ def find_observed_freqs(test_targets):
     # merged counts and del_features
     data = pd.concat((counts, del_features), axis=1).reset_index()
 
-    print("Target site", list(test_targets.values())[0])
-
+    complete_sequence= list(test_targets.values())[1]
+    left = complete_sequence[:28] # ACACGGCATAAGACGCGCTAAAAATAAG
+    right = complete_sequence[28:]
+    print(left)
+    print(right)
     # Pick the data for the first row of the test target as example
-    exp_data = data[data["Sample_Name"].str.endswith(list(test_targets.keys())[0])]
+    exp_data = data[data["Sample_Name"].str.endswith(list(test_targets.keys())[1])]
     exp_data.dropna(subset=["countEvents"], inplace=True)
     # Filter the dataframe to include only deletions (below 28 not sure if we need this though) and 1bp insertions
     exp_data = exp_data[((exp_data["Indel"].str.startswith("1+")) & (exp_data["Type"] == "INSERTION")) | ((exp_data["Type"] == "DELETION") & (exp_data["Size"] <= 28))]
@@ -586,15 +589,12 @@ def find_observed_freqs(test_targets):
     # Divide the counts by the total number of rows in the dataframe to get the frequency as a percentage
     freqs = counts / total_events * 100
     
-    # Print the frequency of each genotype
-    print("Frequency of each genotype insertion")
-    #exp_data["Frequencies"] = freqs
     exp_data["Frequencies (%)"] = exp_data["Indel"].map(freqs)
     exp_data.sort_values(by="Frequencies (%)", ascending=False, inplace=True)
     
     deletion_data = exp_data[exp_data["Type"] == "DELETION"]
     deletion_data[["Position", "Deletion_Length"]] = deletion_data["Indel"].str.split("+", expand=True)
-    # Drop the indel column of deletion data
+    # Drop unnecessary columns
     deletion_data.drop(["Indel", "countEvents", "Size", "homologyLength", "homologyGCContent"], axis=1, inplace=True)
     print("Deletions sorted by frequency:")
     print(deletion_data.head(10))
