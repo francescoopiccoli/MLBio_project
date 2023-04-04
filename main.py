@@ -2,7 +2,7 @@ import sys
 import os
 import numpy
 import csv
-from inDelphi import find_observed_freqs
+from inDelphi import find_observed_freqs, predict
 import pandas as pd
 # From Boris: load test targets
 test_targets = {}
@@ -17,7 +17,7 @@ seq = left_seq + right_seq
 cutsite = len(left_seq)
 find_observed_freqs(test_targets)
 """
-pred_df, stats = inDelphi.predict(seq, cutsite)
+pred_df, stats = predict(seq, cutsite)
 
 pd.options.display.float_format = '{:.2f}'.format
 print(pred_df.tail(4))
