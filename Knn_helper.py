@@ -72,7 +72,6 @@ def featurize(rate_stats, Y_nm):
     del_scores = (del_scores - np.mean(del_scores)) / np.std(del_scores)
 
     X = np.concatenate(( gtag, ent, del_scores), axis = 1)
-    feature_names = ['5G', '5T', '3A', '3G', 'Entropy', 'DelScore']
 
     return X, Y, Normalizer
 
@@ -202,33 +201,32 @@ def calc_statistics(df, exp, alldf_dict, count_and_deletion_df, knn_features):
 def calc_statistics_1bp(df, exp, alldf_dict):
 
   df["Frequency"] = df["countEvents"] / sum(df["countEvents"])
-  df = df[(df['Type'] == 'INSERTION') & (df['Indel'].str.startswith('1+'))]
-  
-  if sum(df['countEvents']) <= 100:
+  one_bp_insertion_df = df[(df['Type'] == 'INSERTION') & (df['Indel'].str.startswith('1+'))]
+  if sum(one_bp_insertion_df['countEvents']) <= 100:
     return
   
   alldf_dict['_Experiment'].append(exp)
-  onebp_freq = sum(df['Frequency'])
+  onebp_freq = sum(one_bp_insertion_df['Frequency'])
   try:
-    a_frac = sum(df[df['Indel'].str.endswith('A')]['Frequency']) / onebp_freq
+    a_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('A')]['Frequency']) / onebp_freq
   except:
     a_frac = 0
   alldf_dict['A frac'].append(a_frac)
 
   try:
-    c_frac = sum(df[df['Indel'].str.endswith('C')]['Frequency']) / onebp_freq
+    c_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('C')]['Frequency']) / onebp_freq
   except:
     c_frac = 0
   alldf_dict['C frac'].append(c_frac)
 
   try:
-    g_frac = sum(df[df['Indel'].str.endswith('G')]['Frequency']) / onebp_freq
+    g_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('G')]['Frequency']) / onebp_freq
   except:
     g_frac = 0
   alldf_dict['G frac'].append(g_frac)
 
   try:
-    t_frac = sum(df[df['Indel'].str.endswith('T')]['Frequency']) / onebp_freq
+    t_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('T')]['Frequency']) / onebp_freq
   except:
     t_frac = 0
   alldf_dict['T frac'].append(t_frac)
