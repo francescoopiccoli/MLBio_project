@@ -561,46 +561,35 @@ def init_model(celltype = 'mESC'):
 
 # Find the observed frequencies for the test targets
 def find_observed_freqs(test_targets):
+    # Get dataset
     master_data = pickle.load(open('input/inDelphi_counts_and_deletion_features.pkl', 'rb'))
     counts = master_data['counts'].drop('fraction', axis=1)
     del_features = master_data['del_features']
-    # merged counts and del_features
     data = pd.concat((counts, del_features), axis=1).reset_index()
 
-    complete_sequence= list(test_targets.values())[1]
-    left = complete_sequence[:28] # ACACGGCATAAGACGCGCTAAAAATAAG
-    right = complete_sequence[28:]
-    print(left)
-    print(right)
-    # Pick the data for the first row of the test target as example
-    exp_data = data[data["Sample_Name"].str.endswith(list(test_targets.keys())[1])]
-    exp_data.dropna(subset=["countEvents"], inplace=True)
-    # Filter the dataframe to include only deletions (below 28 not sure if we need this though) and 1bp insertions
-    exp_data = exp_data[((exp_data["Indel"].str.startswith("1+")) & (exp_data["Type"] == "INSERTION")) | ((exp_data["Type"] == "DELETION") & (exp_data["Size"] <= 28))]
+    # Get exp data
+    data['Sample_Name'] = data['Sample_Name'].map(lambda x: str.split(x, "_")[-1])
+    data = data[data["Sample_Name"].isin(list(test_targets.keys()))]
+    exps = test_targets
 
-    print("Target site data")
-    print(exp_data.head(5))
-    # Group the data by the "Indel" column and count the number of occurrences of each unique value
-    counts = exp_data.groupby("Indel")["countEvents"].sum()
+    for exp in exps:
+      exp_data = data[data["Sample_Name"] == exp]
+      exp_data.dropna(subset=["countEvents"], inplace=True)
+      
+      # Filter the dataframe to include only deletions (below 28 not sure if we need this though) and 1bp insertions
+      exp_data = exp_data[((exp_data["Indel"].str.startswith("1+")) & (exp_data["Type"] == "INSERTION")) | ((exp_data["Type"] == "DELETION") & (exp_data["Size"] <= 28))]
 
-    # Calculate the total number of events in the dataframe
-    total_events = exp_data["countEvents"].sum()
+      # Group the data by the "Indel" column and count the number of occurrences of each unique value
+      counts = exp_data.groupby("Indel")["countEvents"].sum()
 
-    # Divide the counts by the total number of rows in the dataframe to get the frequency as a percentage
-    freqs = counts / total_events * 100
-    
-    exp_data["Frequencies (%)"] = exp_data["Indel"].map(freqs)
-    exp_data.sort_values(by="Frequencies (%)", ascending=False, inplace=True)
-    
-    deletion_data = exp_data[exp_data["Type"] == "DELETION"]
-    deletion_data[["Position", "Deletion_Length"]] = deletion_data["Indel"].str.split("+", expand=True)
-    # Drop unnecessary columns
-    deletion_data.drop(["Indel", "countEvents", "Size", "homologyLength", "homologyGCContent"], axis=1, inplace=True)
-    print("Deletions sorted by frequency:")
-    print(deletion_data.head(10))
-    
-    # Print all 1bp insertions
-    insertion_data = exp_data[exp_data["Type"] == "INSERTION"]
-    # Drop unnecessary columns
-    insertion_data.drop(["countEvents", "Size", "homologyLength", "homologyGCContent"], axis=1, inplace=True)
-    print(insertion_data)
+      # Calculate the total number of events in the dataframe
+      total_events = exp_data["countEvents"].sum()
+
+      # Divide the counts by the total number of rows in the dataframe to get the frequency as a percentage
+      freqs = counts / total_events * 100
+      exp_data["Frequencies (%)"] = exp_data["Indel"].map(freqs)
+      exp_data.sort_values(by="Frequencies (%)", ascending=False, inplace=True)
+
+      test_targets[exp] = exp_data["Frequencies (%)"].max()
+
+    return test_targets
