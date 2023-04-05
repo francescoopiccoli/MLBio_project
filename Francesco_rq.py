@@ -24,16 +24,9 @@ class NnOnePredictor(BaseEstimator):
     def predict(self, X):
         return self.nn_one_find_loss(X)
     
-# New idea: use the total phi score (sum of the phi score for MH and MHless) as prediction value of the two neural networks.
-# In this way we can see how each feature (MH length and GC content and DEL length) contributes to the total phi score, namely to the 
-# strength of the microhomology.
-# It'd be a way to intepret the two nns together as the total phi score is the sum of the two phi scores.
-# See if as expected the MH length and GC content contribute more to the total phi score than the DEL length.
-
 
 # New idea: evaluate the whole model: use "prediction frequency" column of __predict_ins method as the prediction, the target.
-# Pass as input the MH length, GC content and DEL length, all the other attributes for the knn we can figure them out from the inside.
-# The SHAP or permutation feature importance will tell us how much of the 3 features contribute to the prediction frequency for each repair outcome.
+# The SHAP or permutation feature importance will tell us how much each features contribute to the prediction frequency for each repair outcome.
 # Is this feasible? Does this make sense?
 
 
