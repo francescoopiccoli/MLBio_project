@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pickle
 
 import shap
@@ -79,7 +80,6 @@ def nn_one_predict_freq_distribution(input):
     unnormalized_fq = unnormalized_fq + mhfull_contribution
     normalized_fq = np.divide(unnormalized_fq, np.sum(unnormalized_fq))
     # Frequency distribution for each deletion genotype for that target site
-    print(normalized_fq.shape)
     return normalized_fq
 
 # Eventually what I am computing here is a prediction, namely the prediction for each deletion genotype
@@ -151,6 +151,58 @@ def find_permutation_feature_importance():
     ax.set_ylabel('Estimated pdf')
     ax.legend()
     plt.savefig("density.png")
+
+
+def find_SHAP_values_for_freq_distrib():
+    francesco_rq_ans = pickle.load(open('outputaab/francesco_rq_ans.pkl', 'rb'))
+    INP_train, INP_test, OBS_test, DEL_LENS_train, DEL_LENS_test = francesco_rq_ans
+
+    # Add the deletion length as a feature
+    for i in range(len(INP_train)):
+        INP_train[i] = np.concatenate([INP_train[i], DEL_LENS_train[i].reshape(-1, 1)], axis=1)
+
+    # Add the deletion length as a feature
+    for i in range(len(INP_test)):
+        INP_test[i] = np.concatenate([INP_test[i], DEL_LENS_test[i].reshape(-1, 1)], axis=1)
+
+    # Consider each target site separately
+    shap_values = []
+    # Find the feature importance for each target site (here the features are permuted together)
+    # When we permute two features together, we are essentially evaluating the importance of both features combined.
+    # PROBLEM: how do you plot these shap values? Either you plot those for a single target site
+    # or I take somehow the average of all shap values for a target site and also the average of each feature value for that target site, but does it make sense?
+    # Otherwise I can make a scatterplot of the shap values for each feature
+    for i in range(len(INP_test)): #
+        sampled_train_inputs = shap.sample(INP_train[i], len(INP_train[i]) // 8)
+        nn_one_explainer = shap.Explainer(nn_one_predict_freq_distribution, sampled_train_inputs)
+        nn_one_shap_values = nn_one_explainer(INP_test[i])
+        nn_one_shap_values.feature_names = ['MH length', 'GC content', 'Deletion length']
+        #shap.plots.beeswarm(nn_one_shap_values, show=False)
+        shap_values.append(nn_one_shap_values)
+        #plt.tight_layout()
+        #plt.show()
+
+    averaged_shap_values = []
+    for target_site_shap_values in shap_values:
+        target_site_average = np.mean(target_site_shap_values.values, axis=0)
+        averaged_shap_values.append(target_site_average)    
+
+    df = pd.DataFrame(averaged_shap_values, columns=['MH length', 'GC content', 'Del length'])
+
+    # Create a scatter plot with three features
+    # From this image we see: MH length and GC content are positevely correlated, and the deletion length is negatively correlated with both
+    # MH length seems to have a higher importance than GC content and deletion length
+    scatterplot = sns.scatterplot(x='MH length', y='GC content', hue='Del length', data=df)
+    scatterplot.set_xlabel('MH length SHAP value per target site')
+    scatterplot.set_ylabel('GC content SHAP value per target site')
+    plt.tight_layout()
+    plt.savefig("scatter.png")
+    pickle.dump(averaged_shap_values, open('outputaab/prova.pkl', 'wb'))
+
+    # Conver the list of arrays to a 2D numpy array
+    # For each target site, compute the SHAP values for each feature, take the mean of the SHAP values for each feature for all rows of that target site
+    # and plot the SHAP values for each feature
+
 
 
 # high MH score -> strong microhomolgy -> here we understand which features contribute in making the MH score high
@@ -343,7 +395,7 @@ if __name__ == '__main__':
     #find_SHAP_values()
     #save_SHAP_figures()
 
-    find_permutation_feature_importance()
-
+    #find_permutation_feature_importance()
+    find_SHAP_values_for_freq_distrib()
     
 
