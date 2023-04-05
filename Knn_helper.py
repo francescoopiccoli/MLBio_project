@@ -86,6 +86,12 @@ def generate_models(X, Y, bp_stats, Normalizer):
   with open(out_dir + 'rate_model_v2.pkl', 'wb') as f:
     pickle.dump(model, f)
 
+  with open(out_dir + 'X_knn.pkl', 'wb') as f:
+    pickle.dump(X, f)
+
+  with open(out_dir + 'Y_knn.pkl', 'wb') as f:
+    pickle.dump(Y, f)
+
   # Obtain bp stats
   bp_model = dict()
   ins_bases = ['A frac', 'C frac', 'G frac', 'T frac']
