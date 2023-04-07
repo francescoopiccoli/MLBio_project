@@ -36,10 +36,10 @@ def generate_figure_1e(test_sequences, cutsite):
         # Get predictions and statistics
         pred_df, stats = inDelphi.predict(sequence, cutsite)
 
-        # Adds the mhless_genotypes
+        # Add mhless_genotypes
         pred_df = inDelphi.add_mhless_genotypes(pred_df, stats)
 
-        # Adds a genotype colum
+        # Add a genotype column
         pred_df = inDelphi.add_genotype_column(pred_df, stats)
 
         # Needed because of python version
@@ -133,8 +133,9 @@ def find_observed_freqs(test_targets):
       freqs = counts / total_events * 100
       exp_data["Frequencies (%)"] = exp_data["Indel"].map(freqs)
       exp_data.sort_values(by="Frequencies (%)", ascending=False, inplace=True)
+      freq_per_indel = dict(zip(exp_data["Indel"], exp_data["Indel"].map(freqs)))
 
-      freqs[exp] = exp_data["Frequencies (%)"].max()
+      freqs[exp] = freq_per_indel
 
     return freqs
 
