@@ -27,6 +27,28 @@ def render_mpl_table(df, col_width):
     return ax.get_figure()
 
 
+def add_indel_column(pred_df, stats):
+  new_pred_df = pred_df
+  indels = []
+  if type(stats) == dict:
+    seq = stats['Reference sequence']
+    cutsite = stats['Cutsite']
+  else:
+    seq = stats['Reference sequence'].iloc[0]
+    cutsite = stats['Cutsite'].iloc[0]
+
+  for idx, row in new_pred_df.iterrows():
+    gt_pos = row['Genotype_position']
+    if row['Category']  == 'ins':
+        indel = '0+' + str(len(row['Inserted Bases']))
+    else:
+      dl = row['Length']
+      gt_pos = int(gt_pos)
+      indel = str(-dl + gt_pos) + '+' + str(dl)
+    indels.append(indel)
+  new_pred_df['indel'] = indels
+  return new_pred_df
+
 def generate_figure_1e(test_sequences, cutsite):
     pd.set_option('display.max_colwidth', 199)
 
@@ -56,7 +78,11 @@ def generate_figure_1e(test_sequences, cutsite):
         deletionQuery = '(Category == \'del\' | Category == \'mh-less del\')'
         pred_df.loc[pred_df.query(deletionQuery).index, 'Genotype'] = pred_df['Genotype'].str[:cutsite] + pred_df['Genotype'].str[cutsite:]
 
-        total_df.append(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6)[['Genotype', 'Category', 'Predicted frequency']])
+        # Add indel column
+        pred_df = add_indel_column(pred_df, stats)
+
+        print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6))
+        total_df.append(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6)[['Genotype', 'indel', 'Category', 'Predicted frequency']])
 
     pd.reset_option('display.max_rows')
     fig = render_mpl_table(pd.concat(total_df), col_width=12.0)
