@@ -43,8 +43,8 @@ def add_indel_column(pred_df, stats, observed_freqs):
     if row['Category']  == 'ins':
         indel = '1+' + str(row['Inserted Bases'])
     else:
-      dl = row['Length']
       gt_pos = int(gt_pos)
+      dl = row['Length']
       indel = str(-dl + gt_pos) + '+' + str(dl)
     
     # Not sure why this is necessary, might be because of predicted indels that were not observed?
@@ -58,6 +58,31 @@ def add_indel_column(pred_df, stats, observed_freqs):
   new_pred_df['obv'] = freqs
   return new_pred_df
 
+
+def set_genotype(pred_df, stats):
+  new_pred_df = pred_df
+  exps = []
+
+  if type(stats) == dict:
+    seq = stats['Reference sequence']
+    cutsite = stats['Cutsite']
+  else:
+    seq = stats['Reference sequence'].iloc[0]
+    cutsite = stats['Cutsite'].iloc[0]
+
+  for idx, row in new_pred_df.iterrows():
+    gt_pos = row['Genotype_position']
+    if row['Category']  == 'ins':
+        exp = row['Genotype'][:cutsite] + row['Inserted Bases'] + row['Genotype'][cutsite:]
+    else:
+        gt_pos = int(gt_pos)
+        dl = row['Length']
+        exp = row['Genotype'][:cutsite - dl + gt_pos]  + '|' + row['Genotype'][cutsite + gt_pos:]
+
+
+    exps.append(exp)
+  new_pred_df['Genotype'] = exps
+  return new_pred_df
 
 def generate_figure_1e(test_sequences, cutsite, observed_freqs):
     pd.set_option('display.max_colwidth', 199)
@@ -81,12 +106,8 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         mhlessQuery = '(Category == \'del\') & (1 <= Length <= 60) & (0 <= Genotype_position <= Length)'
         pred_df.loc[pred_df.query(mhlessQuery).index,'Category'] = "mh-less del"
 
-        # In the case of an insertion, add insert base(s) to genotype
-        insertionQuery = '(Category == \'ins\')'
-        pred_df.loc[pred_df.query(insertionQuery).index, 'Genotype'] = pred_df['Genotype'].str[:cutsite] + pred_df['Inserted Bases'] + pred_df['Genotype'].str[cutsite:]
-
-        deletionQuery = '(Category == \'del\' | Category == \'mh-less del\')'
-        pred_df.loc[pred_df.query(deletionQuery).index, 'Genotype'] = pred_df['Genotype'].str[:cutsite] + pred_df['Genotype'].str[cutsite:]
+        # Set cut line and add inserted nucleotides to genotype
+        pred_df = set_genotype(pred_df, stats)
 
         # Add indel column & observed frequencies
         pred_df = add_indel_column(pred_df, stats, observed_freqs)
