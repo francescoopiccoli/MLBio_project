@@ -77,7 +77,7 @@ def set_genotype(pred_df, stats):
     else:
         gt_pos = int(gt_pos)
         dl = row['Length']
-        exp = row['Genotype'][:cutsite - dl + gt_pos]  + '|' + row['Genotype'][cutsite + gt_pos:]
+        exp = seq[:cutsite - dl + gt_pos]  + '|' + seq[cutsite + gt_pos:]
 
 
     exps.append(exp)
