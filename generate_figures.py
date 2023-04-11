@@ -14,10 +14,12 @@ def plot_figure_1e_trend():
 
 
 def render_mpl_table(df, col_width):
+    plt.rcParams["font.family"] = "monospace"
+
     size = (np.array(df.shape[::-1]) + np.array([0, 1])) * np.array([col_width, 0.7])
     fig, ax = plt.subplots(figsize=size)
     ax.axis('off')
-
+    
     mpl_table = ax.table(cellText=df.values, bbox=[0, 0, 1, 1], colLabels=df.columns)
     mpl_table.auto_set_font_size(False)
     mpl_table.set_fontsize(16)
@@ -77,7 +79,7 @@ def set_genotype(pred_df, stats):
     else:
         gt_pos = int(gt_pos)
         dl = row['Length']
-        exp = seq[:cutsite - dl + gt_pos]  + '|' + seq[cutsite + gt_pos:]
+        exp = seq[:cutsite - dl + gt_pos] + "." * abs(-dl + gt_pos)  + "|" + "." * abs(gt_pos) + seq[cutsite + gt_pos:]
 
 
     exps.append(exp)
@@ -116,7 +118,7 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         total_df.append(pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'indel', 'Category', 'obv', 'Predicted frequency']])
 
     pd.reset_option('display.max_rows')
-    fig = render_mpl_table(pd.concat(total_df), col_width=12.0)
+    fig = render_mpl_table(pd.concat(total_df), col_width=6.0)
     fig.savefig("figures/figure_1e.png",dpi=300, bbox_inches = "tight")
 
     plot_figure_1e_trend()
