@@ -27,9 +27,10 @@ def render_mpl_table(df, col_width):
     return ax.get_figure()
 
 
-def add_indel_column(pred_df, stats):
+def add_indel_column(pred_df, stats, observed_freqs):
   new_pred_df = pred_df
   indels = []
+  freqs = []
   if type(stats) == dict:
     seq = stats['Reference sequence']
     cutsite = stats['Cutsite']
@@ -40,16 +41,23 @@ def add_indel_column(pred_df, stats):
   for idx, row in new_pred_df.iterrows():
     gt_pos = row['Genotype_position']
     if row['Category']  == 'ins':
-        indel = '0+' + str(len(row['Inserted Bases']))
+        indel = '1+' + str(row['Inserted Bases'])
     else:
       dl = row['Length']
       gt_pos = int(gt_pos)
       indel = str(-dl + gt_pos) + '+' + str(dl)
+    
+    # Not sure why this is necessary, might be because of predicted indels that were not observed?
+    if indel in observed_freqs[seq]:   
+        freqs.append(observed_freqs[seq][indel])
+    else:
+       freqs.append(0)
     indels.append(indel)
   new_pred_df['indel'] = indels
+  new_pred_df['obv'] = freqs
   return new_pred_df
 
-def generate_figure_1e(test_sequences, cutsite):
+def generate_figure_1e(test_sequences, cutsite, observed_freqs):
     pd.set_option('display.max_colwidth', 199)
 
     total_df = []
@@ -78,14 +86,16 @@ def generate_figure_1e(test_sequences, cutsite):
         deletionQuery = '(Category == \'del\' | Category == \'mh-less del\')'
         pred_df.loc[pred_df.query(deletionQuery).index, 'Genotype'] = pred_df['Genotype'].str[:cutsite] + pred_df['Genotype'].str[cutsite:]
 
-        # Add indel column
-        pred_df = add_indel_column(pred_df, stats)
+        # Add indel column & observed frequencies
+        pred_df = add_indel_column(pred_df, stats, observed_freqs)
+
+        
 
         print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6))
-        total_df.append(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6)[['Genotype', 'indel', 'Category', 'Predicted frequency']])
+        total_df.append(pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'indel', 'Category', 'obv', 'Predicted frequency']])
 
     pd.reset_option('display.max_rows')
-    fig = render_mpl_table(pred_df.sort_values(by='Predicted frequency', ascending=False).head(10)[['Genotype', 'indel', 'Category', 'Predicted frequency']], col_width=12.0)
+    fig = render_mpl_table(pd.concat(total_df), col_width=12.0)
     fig.savefig("figures/figure_1e.png",dpi=300, bbox_inches = "tight")
 
     plot_figure_1e_trend()
@@ -140,7 +150,7 @@ def find_observed_freqs(test_targets):
     data['Sample_Name'] = data['Sample_Name'].map(lambda x: str.split(x, "_")[-1])
     data = data[data["Sample_Name"].isin(list(test_targets.keys()))]
     exps = test_targets
-    freqs = {}
+    freqs_dict = {}
 
     for exp in exps:
       exp_data = data[data["Sample_Name"] == exp]
@@ -161,9 +171,9 @@ def find_observed_freqs(test_targets):
       exp_data.sort_values(by="Frequencies (%)", ascending=False, inplace=True)
       freq_per_indel = dict(zip(exp_data["Indel"], exp_data["Indel"].map(freqs)))
 
-      freqs[exp] = freq_per_indel
-
-    return freqs
+      print(exps[exp])
+      freqs_dict[exps[exp]] = freq_per_indel
+    return freqs_dict
 
 if __name__ == '__main__':
     # Init inDelphi with mouse cell dataset
@@ -175,9 +185,9 @@ if __name__ == '__main__':
         csvreader = csv.reader(file)
         for row in csvreader:
             test_targets[row[0]] = row[1]
-    find_observed_freqs(test_targets)
+    observed_freqs = find_observed_freqs(test_targets)
 
     util.ensure_dir_exists("figures/")
     test_sequences = list(test_targets.values())[:4]
-    generate_figure_1e(test_sequences, 27)
+    generate_figure_1e(test_sequences, 27, observed_freqs)
     generate_figure_3f(test_targets)
