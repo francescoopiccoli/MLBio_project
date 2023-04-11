@@ -115,7 +115,7 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         pred_df = add_indel_column(pred_df, stats, observed_freqs)
  
         print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6))
-        total_df.append(pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'indel', 'Category', 'obv', 'Predicted frequency']])
+        total_df.append(pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'Category', 'obv', 'Predicted frequency']])
 
     pd.reset_option('display.max_rows')
     fig = render_mpl_table(pd.concat(total_df), col_width=6.0)
