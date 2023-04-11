@@ -85,7 +85,7 @@ def generate_figure_1e(test_sequences, cutsite):
         total_df.append(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6)[['Genotype', 'indel', 'Category', 'Predicted frequency']])
 
     pd.reset_option('display.max_rows')
-    fig = render_mpl_table(pd.concat(total_df), col_width=12.0)
+    fig = render_mpl_table(pred_df.sort_values(by='Predicted frequency', ascending=False).head(10)[['Genotype', 'indel', 'Category', 'Predicted frequency']], col_width=12.0)
     fig.savefig("figures/figure_1e.png",dpi=300, bbox_inches = "tight")
 
     plot_figure_1e_trend()
