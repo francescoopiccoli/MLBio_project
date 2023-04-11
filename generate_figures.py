@@ -52,10 +52,12 @@ def add_indel_column(pred_df, stats, observed_freqs):
         freqs.append(observed_freqs[seq][indel])
     else:
        freqs.append(0)
+
     indels.append(indel)
   new_pred_df['indel'] = indels
   new_pred_df['obv'] = freqs
   return new_pred_df
+
 
 def generate_figure_1e(test_sequences, cutsite, observed_freqs):
     pd.set_option('display.max_colwidth', 199)
@@ -88,9 +90,7 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
 
         # Add indel column & observed frequencies
         pred_df = add_indel_column(pred_df, stats, observed_freqs)
-
-        
-
+ 
         print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6))
         total_df.append(pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'indel', 'Category', 'obv', 'Predicted frequency']])
 
@@ -171,7 +171,6 @@ def find_observed_freqs(test_targets):
       exp_data.sort_values(by="Frequencies (%)", ascending=False, inplace=True)
       freq_per_indel = dict(zip(exp_data["Indel"], exp_data["Indel"].map(freqs)))
 
-      print(exps[exp])
       freqs_dict[exps[exp]] = freq_per_indel
     return freqs_dict
 
