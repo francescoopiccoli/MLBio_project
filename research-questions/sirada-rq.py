@@ -14,97 +14,146 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import TSNE
+import pickle
+'''
+# Find the observed frequencies for the test targets
+def find_observed_freqs(test_targets):
+    master_data = pickle.load(open('/Users/siradakaewchino/Desktop/Delft/Machine Learning in bioinformatics/MLBio_project/input/inDelphi_counts_and_deletion_features.pkl', 'rb'))
+    counts = master_data['counts'].drop('fraction', axis=1)
+    del_features = master_data['del_features']
+    # merged counts and del_features
+    data = pd.concat((counts, del_features), axis=1).reset_index()
 
-
-test_targets = {}
-with open('/Users/siradakaewchino/Desktop/Delft/Machine Learning in bioinformatics/MLBio_project/research-questions/test_targets_out.csv') as file:
-    csvreader = csv.reader(file)
-    for row in csvreader:
-        test_targets[row[0]] = row[1]
+    #highest_deletion_info = []
     
-highest_del_freq_list = []
-lenght_of_highest_del_freq = []
-MH_del_freq= []
-MH_less_del_freq =[]
-highest_ins_freq_list = []
-phi_number = []
-Precision_procent =[]
-one_bp_ins_freq = []
-frameshift_freq = []
-frame_zero_freq = []
-frame_one_freq = []
-frame_two_freq = []
-for target in test_targets.values():
-    _, stats = inDelphi.predict(target, 27)
-    highest_del_freq_list.append(stats["Highest del frequency"])
-    highest_ins_freq_list.append(stats["Highest ins frequency"])
-    lenght_of_highest_del_freq.append(stats["Expected indel length"])
-    MH_del_freq.append(stats["MH del frequency"])
-    MH_less_del_freq.append(stats["MHless del frequency"])
-    Precision_procent.append(stats["Precision"])
-    one_bp_ins_freq.append(stats["1-bp ins frequency"])
-    frameshift_freq.append(stats["Frameshift frequency"])
-    frame_zero_freq.append(stats["Frame +0 frequency"])
-    frame_one_freq.append(stats['Frame +1 frequency'])
-    frame_two_freq.append(stats['Frame +2 frequency'])
-    phi_number.append(stats['Phi'])
+    highest_deletion_freqs = []
+    deletion_lengths = []
+    MH_deletion_freqs = []
+    MHless_deletion_freq = []
 
 
-# Create a DataFrame with the data list as a column
-df = pd.DataFrame({'Highest deletion frequency': highest_del_freq_list, 'Lenght': lenght_of_highest_del_freq, 'MH deletion frequency': MH_del_freq,'MH less deletion frequency': MH_less_del_freq})
+    for exp in test_targets.keys():
+        exp_data = data[data["Sample_Name"].str.endswith(exp)]
+        exp_data.dropna(subset=["countEvents"], inplace=True)
 
-#'Phi':phi_number, 'Precision': Precision_procent,'1-bp ins frequency': one_bp_ins_freq,'Frame +0 freqency': frame_zero_freq,'Frame +1 frequency':frame_one_freq, 'Frame +2 frequency': frame_two_freq,'Highest ins frequency': highest_ins_freq_list
+        exp_data = exp_data[((exp_data["Indel"].str.startswith("1+")) & (exp_data["Type"] == "INSERTION")) | ((exp_data["Type"] == "DELETION") & (exp_data["Size"]))]  #<= 28
+
+        counts = exp_data.groupby("Indel")["countEvents"].sum()
+        total_events = exp_data["countEvents"].sum()
+        freqs = counts / total_events * 100
+
+        exp_data["Frequencies (%)"] = exp_data["Indel"].map(freqs)
+        exp_data.sort_values(by="Frequencies (%)", ascending=False, inplace=True)
+
+        deletion_data = exp_data[exp_data["Type"] == "DELETION"]
+        if not deletion_data.empty:
+            max_deletion_freq = deletion_data["Frequencies (%)"].max()
+            max_deletion_row = deletion_data[deletion_data["Frequencies (%)"] == max_deletion_freq].iloc[0]
+            deletion_length = max_deletion_row["Size"]
+            
+            
+            # Filter the data for MH deletions and MH less deletions
+        mh_deletion_data = deletion_data[deletion_data["homologyLength"] > 0]
+        non_mh_deletion_data = deletion_data[deletion_data["homologyLength"] == 0]
+
+        if not mh_deletion_data.empty:
+            max_mh_deletion_freq = mh_deletion_data["Frequencies (%)"].max()
+        else:
+            max_mh_deletion_freq = 0
+
+        if not non_mh_deletion_data.empty:
+            max_non_mh_deletion_freq = non_mh_deletion_data["Frequencies (%)"].max()  
+        else:
+            max_non_mh_deletion_freq = 0
+
+            #highest_deletion_info.append((max_deletion_freq, deletion_length, max_mh_deletion_freq, max_non_mh_deletion_length))  # Append the highest deletion frequency, length, MH deletion frequency, and non-MH deletion length as a tuple
+            
+        highest_deletion_freqs.append(max_deletion_freq)
+        deletion_lengths.append(deletion_length)
+        MH_deletion_freqs.append(max_mh_deletion_freq)
+        MHless_deletion_freq.append(max_non_mh_deletion_freq)
+
+    #return highest_deletion_info  # Return the list of tuples
+
+    return (highest_deletion_freqs, deletion_lengths,
+            MH_deletion_freqs, MHless_deletion_freq)
+
+
+if __name__ == '__main__':
+
+    # Code for loading test_targets and calling the find_observed_freqs() function remains unchanged
+    # Provide test_targets manually for this example
+    test_targets = {}
+    with open('/Users/siradakaewchino/Desktop/Delft/Machine Learning in bioinformatics/MLBio_project/research-questions/test_targets_out.csv') as file:
+        csvreader = csv.reader(file)
+        for row in csvreader:
+            test_targets[row[0]] = row[1]
+    # Call find_observed_freqs() and store the result in a variable
+    highest_deletion_info = find_observed_freqs(test_targets)
+
+# Call find_observed_freqs() and store the result in variables
+highest_deletion_freqs, deletion_lengths, MH_deletion_freqs, MHless_deletion_freq = find_observed_freqs(test_targets)
+
+# Create a DataFrame with the frequency values
+data = {'Highest Deletion Frequencies': highest_deletion_freqs,
+        'Deletion Lengths': deletion_lengths,
+        'Highest MH Deletion Frequencies': MH_deletion_freqs,
+        'Highest MHless Deletion Frequencies': MHless_deletion_freq}
+
+df = pd.DataFrame(data)
+
+# Print the DataFrame
 #print(df)
+
+# Save the DataFrame to a CSV file
+#clear
+df.to_csv('output_sirada.csv', index=False)
+'''
+
+df = pd.read_csv('/Users/siradakaewchino/Desktop/Delft/Machine Learning in bioinformatics/MLBio_project/research-questions/output_sirada.csv')
+
+# Normalize the data
+normalized_df = (df - df.min()) / (df.max() - df.min())
+
 #PCA 
 scaler = StandardScaler()
 scaled_data = scaler.fit_transform(df)
 
 # Choose the number of components for PCA
 #calculates the minimum number of principal components you can obtain from the given dataset. 
-#n_components = min(df.shape[0], df.shape[1])
+# n_components = min(df.shape[0], df.shape[1])
 n_components = 4
-#print(n_components)
+
 
 # Create a PCA instance and fit it on the standardized data
-pca = PCA(n_components=n_components)
-principal_components = pca.fit_transform(scaled_data)
+pca = PCA(n_components)
+principal_components = pca.fit_transform(normalized_df)
 
-# Get the loadings for each feature on the principal components
-#loadings = pca.components_
-
-# Create a DataFrame with the loadings
-#loadings_df = pd.DataFrame(loadings, columns=df.columns, index=[f'PC{i+1}' for i in range(n_components)])
-
-
-pc_columns = ['PC' + str(i + 1) for i in range(n_components)]
-principal_df = pd.DataFrame(data=principal_components, columns=pc_columns)
-
-#explained_variance_ratio = pca.explained_variance_ratio_
-#cumulative_explained_variance = np.cumsum(explained_variance_ratio)
-
-# Categorize 'Highest deletion frequency' into bins
-df['Highest deletion frequency category'] = pd.qcut(df['Highest deletion frequency'], 3, labels=['Low', 'Medium', 'High'])
-#df['MH deletion freq category'] = pd.qcut(df['MH deletion frequency'], 3, labels=['Low', 'Medium', 'High'])
-
-# Add this new column to the principal_df DataFrame
-principal_df['Highest deletion frequency category'] = df['Highest deletion frequency category']
-#principal_df['MH deletion freq category'] = df['MH deletion freq category']
-
+# Create a new DataFrame with the principal components
+principal_df = pd.DataFrame(data=principal_components, columns=[f'Principal Component {i+1}' for i in range(principal_components.shape[1])])
 
 # Create a scatter plot matrix (pair plot) using Seaborn
-#sns.pairplot(principal_df, diag_kind='hist', markers='o', corner=False) #hue='Highest deletion frequency category'
-#plt.show()
+sns.pairplot(principal_df)
+plt.show()
+
+# Calculate explained variance
+explained_variance = pca.explained_variance_ratio_ * 100
 
 
-#Heatmap
-#correlation_matrix = df.corr()
-#plt.figure(figsize=(10, 8))
-#sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", vmin=-1, vmax=1, linewidths=0.5)
-#plt.title("Correlation Matrix")
-#plt.show()
+'''
+# Create a DataFrame with the principal components
+principal_df = pd.DataFrame(data=principal_components, columns=['Principal Component 1', 'Principal Component 2'])
 
+# Plot the scatter plot
+plt.figure(figsize=(8, 6))
+plt.scatter(principal_df['Principal Component 1'], principal_df['Principal Component 2'], alpha=0.5)
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
+plt.title('PCA Scatter Plot')
+plt.show()
+'''
 
-
+'''
 # Create a biplot
 def create_biplot(principal_components, pca, df, categories):
     plt.figure(figsize=(10, 8))
@@ -133,19 +182,20 @@ def create_biplot(principal_components, pca, df, categories):
 # Call the create_biplot function with the additional 'categories' argument
 create_biplot(principal_components, pca, df, df['Highest deletion frequency category'])
 
-
-
+'''
 
 '''
+
 # Create a scree plot for the explained variance ratio
 plt.figure(figsize=(8, 6))
-plt.plot(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio, marker='o')
+plt.plot(range(1, len(explained_variance) + 1), explained_variance, marker='o')
 plt.xlabel('Number of Principal Components')
 plt.ylabel('Explained Variance Ratio')
 plt.title('Scree Plot - Explained Variance Ratio')
 plt.grid()
 plt.show()
 
+'''
 # Create a scree plot for the cumulative explained variance
 plt.figure(figsize=(8, 6))
 plt.plot(range(1, len(cumulative_explained_variance) + 1), cumulative_explained_variance, marker='o')
@@ -155,6 +205,4 @@ plt.title('Scree Plot - Cumulative Explained Variance')
 plt.grid()
 plt.show()
 '''
-
-
 
