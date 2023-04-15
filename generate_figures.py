@@ -75,7 +75,7 @@ def set_genotype(pred_df, stats):
   for idx, row in new_pred_df.iterrows():
     gt_pos = row['Genotype_position']
     if row['Category']  == 'ins':
-        exp = row['Genotype'][:cutsite] + row['Inserted Bases'] + row['Genotype'][cutsite:]
+        exp = row['Genotype'][:cutsite] + row['Genotype'][cutsite:]
     else:
         gt_pos = int(gt_pos)
         dl = row['Length']
