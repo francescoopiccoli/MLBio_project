@@ -115,7 +115,14 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         pred_df = add_indel_column(pred_df, stats, observed_freqs)
  
         print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6))
-        total_df.append(pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'Category', 'obv', 'Predicted frequency']])
+
+        sorted_df = pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'Category', 'obv', 'Predicted frequency']]
+        
+        sorted_df.loc[-1] = [sequence, '', '', '']  # adding a row
+        sorted_df.index = sorted_df.index + 1  # shifting index
+        sorted_df.sort_index(inplace=True) 
+
+        total_df.append(sorted_df)
 
     pd.reset_option('display.max_rows')
     fig = render_mpl_table(pd.concat(total_df), col_width=6.0)
