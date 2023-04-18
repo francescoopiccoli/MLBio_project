@@ -43,7 +43,7 @@ def add_indel_column(pred_df, stats, observed_freqs):
 
   # For each row in the df (repair outcomes of the sequence), create an indel column and find the observed frequency, from the freqs dict
   for idx, row in new_pred_df.iterrows():
-    gt_pos = row['Genotype_position']
+    gt_pos = row['Genotype position']
 
     if row['Category']  == 'ins':
         indel = '1+' + str(row['Inserted Bases'])
@@ -79,7 +79,7 @@ def set_genotype(pred_df, stats):
 
   # For each row in the df (repair outcomes of the sequence), change the genotype to add | and . in the case of a deletion
   for idx, row in new_pred_df.iterrows():
-    gt_pos = row['Genotype_position']
+    gt_pos = row['Genotype position']
     if row['Category']  == 'ins':
         exp = row['Genotype'][:cutsite] + row['Genotype'][cutsite:]
     else:
@@ -102,19 +102,27 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         # Get predictions and statistics
         pred_df, stats = inDelphi.predict(sequence, cutsite)
 
+        # Needed because of python version
+        pred_df = pred_df.rename(columns={'Genotype position': 'Genotype_position'})
+
+        # Correctly identify insertions
+        insQuery = '(Category == \'ins\')'
+        pred_df.loc[pred_df.query(insQuery).index,'Cat'] = "ins"
+
+        # Correctly identify mh deletions
+        mhQuery = '(Category == \'del\') & (Genotype_position != \'e\')'
+        pred_df.loc[pred_df.query(mhQuery).index,'Cat'] = "mh del"
+
+        # Needed because of python version
+        pred_df = pred_df.rename(columns={'Genotype_position': 'Genotype position'})
+
         # Add mhless_genotypes
         pred_df = inDelphi.add_mhless_genotypes(pred_df, stats)
 
         # Add a genotype column
         pred_df = inDelphi.add_genotype_column(pred_df, stats)
 
-        # Needed because of python version
-        pred_df = pred_df.rename(columns={'Genotype position': 'Genotype_position'})
-
-        # Correctly identify mh-less deletions
-        mhlessQuery = '(Category == \'del\') & (1 <= Length <= 60) & (0 <= Genotype_position <= Length)'
-        pred_df.loc[pred_df.query(mhlessQuery).index,'Category'] = "mh-less del"
-
+   
         # Set cut line and add inserted nucleotides to genotype
         pred_df = set_genotype(pred_df, stats)
 
@@ -126,7 +134,7 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         pred_df = pred_df.rename(columns={'Predicted frequency': 'Pred.%'})
       
         # Get the top 6 most frequent repair outcomes
-        sorted_df = pred_df.sort_values(by='Obs.%', ascending=False).head(6)[['Genotype', 'Category', 'Obs.%', 'Pred.%']]
+        sorted_df = pred_df.sort_values(by='Obs.%', ascending=False).head(6)[['Genotype', 'Cat', 'Obs.%', 'Pred.%']]
 
         # Round all columns to 1 decimal
         sorted_df = sorted_df.round(1)

@@ -506,6 +506,7 @@ def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
 
   mhless_df = pd.DataFrame(mhless_dd)
   mhless_df['Category'] = 'del'
+  mhless_df['Cat'] = 'mh-less del'
   mhless_df['Microhomology length'] = 0
   new_pred_df = new_pred_df.append(mhless_df, ignore_index = True)
 
