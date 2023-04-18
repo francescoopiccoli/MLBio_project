@@ -12,7 +12,7 @@ from mylib import util
 def plot_figure_1e_trend():
     pass
 
-
+# Render df as a table to generate figure
 def render_mpl_table(df, col_width):
     plt.rcParams["font.family"] = "monospace"
 
@@ -28,7 +28,8 @@ def render_mpl_table(df, col_width):
 
     return ax.get_figure()
 
-
+# Adds an indel column (used to find all repair outcome observation % of a particle sequence + outcome),
+# and add the observed repair outcome frequency to each row
 def add_indel_column(pred_df, stats, observed_freqs):
   new_pred_df = pred_df
   indels = []
@@ -40,8 +41,10 @@ def add_indel_column(pred_df, stats, observed_freqs):
     seq = stats['Reference sequence'].iloc[0]
     cutsite = stats['Cutsite'].iloc[0]
 
+  # For each row in the df (repair outcomes of the sequence), create an indel column and find the observed frequency, from the freqs dict
   for idx, row in new_pred_df.iterrows():
     gt_pos = row['Genotype_position']
+
     if row['Category']  == 'ins':
         indel = '1+' + str(row['Inserted Bases'])
     else:
@@ -56,11 +59,13 @@ def add_indel_column(pred_df, stats, observed_freqs):
        freqs.append(0)
 
     indels.append(indel)
+  
+  # Add indels and observed frequences to the df and return
   new_pred_df['indel'] = indels
-  new_pred_df['obv'] = freqs
+  new_pred_df['Obs.%'] = freqs
   return new_pred_df
 
-
+# add the | at the place of the cutsite and . in the place of deleted nucleotides to each sequence
 def set_genotype(pred_df, stats):
   new_pred_df = pred_df
   exps = []
@@ -72,6 +77,7 @@ def set_genotype(pred_df, stats):
     seq = stats['Reference sequence'].iloc[0]
     cutsite = stats['Cutsite'].iloc[0]
 
+  # For each row in the df (repair outcomes of the sequence), change the genotype to add | and . in the case of a deletion
   for idx, row in new_pred_df.iterrows():
     gt_pos = row['Genotype_position']
     if row['Category']  == 'ins':
@@ -80,12 +86,13 @@ def set_genotype(pred_df, stats):
         gt_pos = int(gt_pos)
         dl = row['Length']
         exp = seq[:cutsite - dl + gt_pos] + "." * abs(-dl + gt_pos)  + "|" + "." * abs(gt_pos) + seq[cutsite + gt_pos:]
-
-
     exps.append(exp)
+
+  # Update genotype column in the df and return
   new_pred_df['Genotype'] = exps
   return new_pred_df
 
+# Generate figure 1e
 def generate_figure_1e(test_sequences, cutsite, observed_freqs):
     pd.set_option('display.max_colwidth', 199)
 
@@ -115,20 +122,23 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         pred_df = add_indel_column(pred_df, stats, observed_freqs)
  
         print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6))
-
+        
+        pred_df = pred_df.rename(columns={'Predicted frequency': 'Pred.%'})
+      
         # Get the top 6 most frequent repair outcomes
-        sorted_df = pred_df.sort_values(by='obv', ascending=False).head(6)[['Genotype', 'Category', 'obv', 'Predicted frequency']]
+        sorted_df = pred_df.sort_values(by='Obs.%', ascending=False).head(6)[['Genotype', 'Category', 'Obs.%', 'Pred.%']]
 
-        # Add the sequence we are editing on
-        sorted_df.loc[-1] = [sequence[:stats['Cutsite']] + '|' + sequence[stats['Cutsite']:], '', '', ''] 
-        sorted_df.index = sorted_df.index + 1 
-        sorted_df.sort_index(inplace=True) 
+        # Round all columns to 1 decimal
+        sorted_df = sorted_df.round(1)
+
+        # Add the sequence we are editing on to the top of teh df
+        sorted_df.iloc[0] = [sequence[:stats['Cutsite']] + '|' + sequence[stats['Cutsite']:], '', '', ''] 
 
         # Add result of this sequence to dataframe used to generate the figure
         total_df.append(sorted_df)
 
     pd.reset_option('display.max_rows')
-    fig = render_mpl_table(pd.concat(total_df), col_width=6.0)
+    fig = render_mpl_table(pd.concat(total_df), col_width=4.0)
     fig.savefig("figures/figure_1e.png",dpi=300, bbox_inches = "tight")
 
     plot_figure_1e_trend()
