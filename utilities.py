@@ -1,3 +1,5 @@
+# Utility functions from https://github.com/maxwshen/indelphi-dataprocessinganalysis
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -8,10 +10,9 @@ import seaborn as sns
 from scipy.stats import pearsonr
 from collections import defaultdict
 from matplotlib.backends.backend_pdf import PdfPages 
-import forward_step as fw
+import nn_helper as fw
 import csv
 from mylib import util
-
 
 ##
 # Setup environment

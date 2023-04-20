@@ -1,4 +1,4 @@
-# Author: maxwshen, https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/master/src-modeling-and-analysis/d2_model.py
+# Originally https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/master/src-modeling-and-analysis/d2_model.py, Author: maxwshen
 
 # Model including a neural net in autograd
 from __future__ import absolute_import, division
@@ -15,10 +15,9 @@ from scipy.stats import entropy
 from sklearn.model_selection import train_test_split
 from matplotlib.backends.backend_pdf import PdfPages 
 import matplotlib.patches as mpatches
-from Knn_helper import train_knn
+from knn_helper import train_knn
 import utilities as ut
-import forward_step as fw
-import backprop as bp
+from nn_helper import *
 
 NAME = util.get_fn(__file__)
 
@@ -49,7 +48,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     # MH-based deletion frequencies
     # inp[idx]:  [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]
     # Compute all the psi scores for that target site, a psi score for each mh_length and gc_content pair.
-    mh_scores = fw.nn_match_score_function(nn_params, inp[idx])
+    mh_scores = nn_match_score_function(nn_params, inp[idx])
     # take all the deletion lengths corresponding to that target site CTTTCACTTTATAGATTTAT
     Js = np.array(del_lens[idx])
     # compute the phi scores from psi scores penalizing on the deletion length Js.
@@ -68,7 +67,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
         #dl = deletion length for that particular instance/row of the dataset for that target site
         dl = del_lens[idx][jdx]
         # Compute the mhless score for that deletion length using the 2nd neural network
-        mhless_score = fw.nn_match_score_function(nn2_params, np.array(dl))
+        mhless_score = nn_match_score_function(nn2_params, np.array(dl))
         # add penalization on deletion length again.
         mhless_score = np.exp(mhless_score - 0.25*dl)
         # mask is a vector of all zeros, except in the position where we are currently at, where
@@ -123,7 +122,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     ##
     dls = np.arange(1, 28+1)
     dls = dls.reshape(28, 1)
-    nn2_scores = fw.nn_match_score_function(nn2_params, dls)
+    nn2_scores = nn_match_score_function(nn2_params, dls)
     unnormalized_nn2 = np.exp(nn2_scores - 0.25*np.arange(1, 28+1))
     
     # iterate through del_lens vector, adding mh_scores (already computed above) to the correct index
@@ -166,6 +165,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
   # LOSS += np.sum((normalized_fq - obs[idx])**2)
   return LOSS / num_samples
 
+
 # Save kNN features
 # The function is basically a copy of main_objective but
 # only with the parts necessary for the kNN feature computation
@@ -173,7 +173,7 @@ def save_knn_features(nn_params, nn2_params, inp, del_lens):
   knn_features = []
 
   for idx in range(len(inp)):
-    mh_scores = fw.nn_match_score_function(nn_params, inp[idx])
+    mh_scores = nn_match_score_function(nn_params, inp[idx])
     Js = np.array(del_lens[idx])
     unnormalized_fq = np.exp(mh_scores - 0.25*Js)
     mh_phi_total = np.sum(unnormalized_fq, dtype=np.float64)
@@ -184,7 +184,7 @@ def save_knn_features(nn_params, nn2_params, inp, del_lens):
     for jdx in range(len(mh_vector)):
       if del_lens[idx][jdx] == mh_vector[jdx]:
         dl = del_lens[idx][jdx]
-        mhless_score = fw.nn_match_score_function(nn2_params, np.array(dl))
+        mhless_score = nn_match_score_function(nn2_params, np.array(dl))
         mhless_score = np.exp(mhless_score - 0.25*dl)
         mask = np.concatenate([np.zeros(jdx,), np.ones(1,) * mhless_score, np.zeros(len(mh_vector) - jdx - 1,)])
         mhfull_contribution = mhfull_contribution + mask
@@ -194,7 +194,7 @@ def save_knn_features(nn_params, nn2_params, inp, del_lens):
 
     dls = np.arange(1, 28+1)
     dls = dls.reshape(28, 1)
-    nn2_scores = fw.nn_match_score_function(nn2_params, dls)
+    nn2_scores = nn_match_score_function(nn2_params, dls)
     unnormalized_nn2 = np.exp(nn2_scores - 0.25*np.arange(1, 28+1))
     mh_less_phi_total = np.sum(unnormalized_nn2, dtype=np.float64)
     
@@ -293,10 +293,8 @@ if __name__ == '__main__':
   ut.copy_script(out_dir)
   util.ensure_dir_exists(out_dir_params)
 
-
   log_fn = out_dir + '_log_%s.out' % (out_letters)
-  with open(log_fn, 'w') as f:
-    pass
+  with open(log_fn, 'w') as f: pass
 
   counter = 0
   seed = npr.RandomState(1)
@@ -311,7 +309,6 @@ if __name__ == '__main__':
   inp_dir = './input/'
 
   # A pickle file containing a dict object with two keys: counts and del_features.
-
   # The guide names are in the format <guide_id>_<guide sequence>. The guide sequence can be extracted from this id and used to determine the -3, -4 and -5 nucleotides for the kNN insertion model and insertion-type repair outcomes.
   master_data = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
 
@@ -332,7 +329,6 @@ if __name__ == '__main__':
   # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
 
-  
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
     #mhl and gcf are both arrays
@@ -346,9 +342,10 @@ if __name__ == '__main__':
   NAMES = np.array([str(s) for s in exps])
   DEL_LENS = np.array(del_lens)
 
-
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
+
+  util.ensure_dir_exists("output_test")
   ut.save_train_test_names(NAMES_train, NAMES_test, out_dir)
   ut.save_test_targets(NAMES_test)
   
@@ -389,17 +386,18 @@ if __name__ == '__main__':
     
     return None
   
-  # optimized_params = bp.adam_minmin(both_objective_grad,
-  #                                 init_nn_params, 
-  #                                 init_nn2_params, 
-  #                                 step_size = step_size, 
-  #                                 num_iters = num_epochs,
-  #                                 callback = print_perf)
+  print('--- Start training NN1 and NN2 ---')
+  optimized_params = adam_minmin(both_objective_grad,
+                                  init_nn_params, 
+                                  init_nn2_params, 
+                                  step_size = step_size, 
+                                  num_iters = num_epochs,
+                                  callback = print_perf)
 
-  # print('NN_1 and NN_2 successfully trained!')
+  print('--- NN_1 and NN_2 successfully trained! ---')
 
-  # print('Start kNN training')
-  # save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
-  # knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
-  # train_knn(data.reset_index())
-  # print('kNN features successfully calculated!')
+  print('--- Start training KNN ---')
+  save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
+  knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
+  train_knn(data.reset_index(), knn_features)
+  print('--- KNN features successfully calculated! ---')
