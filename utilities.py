@@ -8,7 +8,7 @@ import seaborn as sns
 from scipy.stats import pearsonr
 from collections import defaultdict
 from matplotlib.backends.backend_pdf import PdfPages 
-import forward_step as fw
+import nn_helper as fw
 import csv
 from mylib import util
 

@@ -15,10 +15,9 @@ from scipy.stats import entropy
 from sklearn.model_selection import train_test_split
 from matplotlib.backends.backend_pdf import PdfPages 
 import matplotlib.patches as mpatches
-from Knn_helper import train_knn
+from knn_helper import train_knn
 import utilities as ut
-import forward_step as fw
-import backprop as bp
+from nn_helper import *
 
 NAME = util.get_fn(__file__)
 
@@ -43,21 +42,17 @@ def batch_normalize(activations):
 def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples, rs):
   LOSS = 0
 
-  # iterate over all target site:  : [
-  # [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]]
-  knn_features = []
+  # iterate over all target site:
   for idx in range(len(inp)):
     ##
     # MH-based deletion frequencies
     # inp[idx]:  [[CTTTCACTTTATAGATTTAT_mhls][CTTTCACTTTATAGATTTAT_gcfs]]
-    # Compute all the psi scores. 
-    mh_scores = fw.nn_match_score_function(nn_params, inp[idx])
-    # take all the deletion lenghts corresponding to that target site CTTTCACTTTATAGATTTAT
+    # Compute all the psi scores for that target site, a psi score for each mh_length and gc_content pair.
+    mh_scores = nn_match_score_function(nn_params, inp[idx])
+    # take all the deletion lengths corresponding to that target site CTTTCACTTTATAGATTTAT
     Js = np.array(del_lens[idx])
     # compute the phi scores from psi scores penalizing on the deletion length Js.
     unnormalized_fq = np.exp(mh_scores - 0.25*Js)
-    # Sum all the mh phi scores for that target site.
-    mh_phi_total = np.sum(unnormalized_fq, dtype=np.float64)
     
     # Add MH-less contribution at full MH deletion lengths
     mh_vector = inp[idx].T[0] # [CTTTCACTTTATAGATTTAT_mhls] ie array containg all microhomology length for the current target site we are considering
@@ -72,7 +67,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
         #dl = deletion length for that particular instance/row of the dataset for that target site
         dl = del_lens[idx][jdx]
         # Compute the mhless score for that deletion length using the 2nd neural network
-        mhless_score = fw.nn_match_score_function(nn2_params, np.array(dl))
+        mhless_score = nn_match_score_function(nn2_params, np.array(dl))
         # add penalization on deletion length again.
         mhless_score = np.exp(mhless_score - 0.25*dl)
         # mask is a vector of all zeros, except in the position where we are currently at, where
@@ -127,10 +122,8 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
     ##
     dls = np.arange(1, 28+1)
     dls = dls.reshape(28, 1)
-    nn2_scores = fw.nn_match_score_function(nn2_params, dls)
+    nn2_scores = nn_match_score_function(nn2_params, dls)
     unnormalized_nn2 = np.exp(nn2_scores - 0.25*np.arange(1, 28+1))
-    # Sum all the mh-less phi scores for that target site.
-    mh_less_phi_total = np.sum(unnormalized_nn2, dtype=np.float64)
     
     # iterate through del_lens vector, adding mh_scores (already computed above) to the correct index
     # Create an array/vector of 28 entries, each for each deletion length considered.
@@ -179,7 +172,7 @@ def save_knn_features(nn_params, nn2_params, inp, del_lens):
   knn_features = []
 
   for idx in range(len(inp)):
-    mh_scores = fw.nn_match_score_function(nn_params, inp[idx])
+    mh_scores = nn_match_score_function(nn_params, inp[idx])
     Js = np.array(del_lens[idx])
     unnormalized_fq = np.exp(mh_scores - 0.25*Js)
     mh_phi_total = np.sum(unnormalized_fq, dtype=np.float64)
@@ -190,7 +183,7 @@ def save_knn_features(nn_params, nn2_params, inp, del_lens):
     for jdx in range(len(mh_vector)):
       if del_lens[idx][jdx] == mh_vector[jdx]:
         dl = del_lens[idx][jdx]
-        mhless_score = fw.nn_match_score_function(nn2_params, np.array(dl))
+        mhless_score = nn_match_score_function(nn2_params, np.array(dl))
         mhless_score = np.exp(mhless_score - 0.25*dl)
         mask = np.concatenate([np.zeros(jdx,), np.ones(1,) * mhless_score, np.zeros(len(mh_vector) - jdx - 1,)])
         mhfull_contribution = mhfull_contribution + mask
@@ -200,7 +193,7 @@ def save_knn_features(nn_params, nn2_params, inp, del_lens):
 
     dls = np.arange(1, 28+1)
     dls = dls.reshape(28, 1)
-    nn2_scores = fw.nn_match_score_function(nn2_params, dls)
+    nn2_scores = nn_match_score_function(nn2_params, dls)
     unnormalized_nn2 = np.exp(nn2_scores - 0.25*np.arange(1, 28+1))
     mh_less_phi_total = np.sum(unnormalized_nn2, dtype=np.float64)
     
@@ -251,7 +244,7 @@ def parse_input_data(data):
   exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = deletions_data['Sample_Name'].unique()
+  exps = deletions_data['Sample_Name'].unique()[:10]
 
   # Microhomology data has the homology length greater than 0
   mh_data = deletions_data[deletions_data['homologyLength'] != 0]
@@ -392,17 +385,10 @@ if __name__ == '__main__':
       ut.print_and_log(" Iter | Train Loss\t| Train Rsq1\t| Train Rsq2\t| Test Loss\t| Test Rsq1\t| Test Rsq2", log_fn)
       ut.print_and_log('%s %s %s' % (datetime.datetime.now(), out_letters, letters), log_fn)
       ut.save_parameters(nn_params, nn2_params, out_dir_params, letters)
-      # save_rsq_params_csv(NAMES_test, test_rsqs, nn2_params, out_dir, letters, 'test')
-      if iter >= 10:
-      # if iter >= 0:
-        pass
-        # plot_mh_score_function(nn_params, out_dir, letters + '_nn')
-        # plot_pred_obs(nn_params, nn2_params, INP_train, OBS_train, DEL_LENS_train, NAMES_train, 'train', letters)
-        # plot_pred_obs(nn_params, nn2_params, INP_test, OBS_test, DEL_LENS_test, NAMES_test, 'test', letters)
-
+    
     return None
   
-  # optimized_params = bp.adam_minmin(both_objective_grad,
+  # optimized_params = adam_minmin(both_objective_grad,
   #                                 init_nn_params, 
   #                                 init_nn2_params, 
   #                                 step_size = step_size, 
@@ -414,5 +400,5 @@ if __name__ == '__main__':
   # print('Start kNN training')
   # save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
   # knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
-  # train_knn(data.reset_index())
+  # train_knn(data.reset_index(), pd.read_pickle("model-mlbio/knn_features_from_loss_function.pkl"))
   # print('kNN features successfully calculated!')
