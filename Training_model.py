@@ -401,5 +401,5 @@ if __name__ == '__main__':
   # print('Start kNN training')
   # save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
   # knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
-  # train_knn(data.reset_index())
+  # train_knn(data.reset_index(), pd.read_pickle("model-mlbio/knn_features_from_loss_function.pkl"))
   # print('kNN features successfully calculated!')

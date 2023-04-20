@@ -236,7 +236,7 @@ def calc_statistics_1bp(df, exp, alldf_dict):
   alldf_dict['Base'].append(fivebase)
   return alldf_dict
 
-def train_knn(count_and_deletion_df, knn_features=pd.read_pickle("model-mlbio/knn_features_from_loss_function.pkl")):
+def train_knn(count_and_deletion_df, knn_features):
   print('Generating KNN Model')
   global out_dir
   util.ensure_dir_exists(out_dir)
