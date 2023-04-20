@@ -346,7 +346,7 @@ if __name__ == '__main__':
 
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
-
+  pickle.dump(ans, open(out_dir + '/francesco_rq_ans.pkl', 'wb'))
   util.ensure_dir_exists("output_test")
   ut.save_train_test_names(NAMES_train, NAMES_test, out_dir)
   ut.save_test_targets(NAMES_test)
