@@ -15,7 +15,8 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import TSNE
 import pickle
-'''
+
+
 # Find the observed frequencies for the test targets
 def find_observed_freqs(test_targets):
     master_data = pickle.load(open('/Users/siradakaewchino/Desktop/Delft/Machine Learning in bioinformatics/MLBio_project/input/inDelphi_counts_and_deletion_features.pkl', 'rb'))
@@ -36,7 +37,7 @@ def find_observed_freqs(test_targets):
         exp_data = data[data["Sample_Name"].str.endswith(exp)]
         exp_data.dropna(subset=["countEvents"], inplace=True)
 
-        exp_data = exp_data[((exp_data["Indel"].str.startswith("1+")) & (exp_data["Type"] == "INSERTION")) | ((exp_data["Type"] == "DELETION") & (exp_data["Size"]))]  #<= 28
+        exp_data = exp_data[((exp_data["Indel"].str.startswith("1+")) & (exp_data["Type"] == "INSERTION")) | ((exp_data["Type"] == "DELETION") & (exp_data["Size"]<= 28))]  #<= 28
 
         counts = exp_data.groupby("Indel")["countEvents"].sum()
         total_events = exp_data["countEvents"].sum()
@@ -53,8 +54,13 @@ def find_observed_freqs(test_targets):
             
             
             # Filter the data for MH deletions and MH less deletions
-        mh_deletion_data = deletion_data[deletion_data["homologyLength"] > 0]
-        non_mh_deletion_data = deletion_data[deletion_data["homologyLength"] == 0]
+            mh_deletion_data = deletion_data[deletion_data["homologyLength"] > 0]
+            non_mh_deletion_data = deletion_data[deletion_data["homologyLength"] == 0]
+
+        
+            # Correctly identify mh-less deletions
+            #mhlessQuery = '("Type" == "DELETION") & (1 <= homologyLength <= 60)'
+            #non_mh_deletion_data.loc[non_mh_deletion_data.query(mhlessQuery).index, 'Type'] = "mh-less del"
 
         if not mh_deletion_data.empty:
             max_mh_deletion_freq = mh_deletion_data["Frequencies (%)"].max()
@@ -103,17 +109,15 @@ data = {'Highest Deletion Frequencies': highest_deletion_freqs,
 df = pd.DataFrame(data)
 
 # Print the DataFrame
-#print(df)
+print(df)
 
 # Save the DataFrame to a CSV file
 #clear
 df.to_csv('output_sirada.csv', index=False)
-'''
+
 
 df = pd.read_csv('/Users/siradakaewchino/Desktop/Delft/Machine Learning in bioinformatics/MLBio_project/research-questions/output_sirada.csv')
 
-# Normalize the data
-normalized_df = (df - df.min()) / (df.max() - df.min())
 
 #PCA 
 scaler = StandardScaler()
@@ -121,70 +125,51 @@ scaled_data = scaler.fit_transform(df)
 
 # Choose the number of components for PCA
 #calculates the minimum number of principal components you can obtain from the given dataset. 
-# n_components = min(df.shape[0], df.shape[1])
 n_components = 4
 
 
 # Create a PCA instance and fit it on the standardized data
 pca = PCA(n_components)
-principal_components = pca.fit_transform(normalized_df)
+principal_components = pca.fit_transform(df)
 
 # Create a new DataFrame with the principal components
 principal_df = pd.DataFrame(data=principal_components, columns=[f'Principal Component {i+1}' for i in range(principal_components.shape[1])])
+
+# Plotting
 
 # Create a scatter plot matrix (pair plot) using Seaborn
 sns.pairplot(principal_df)
 plt.show()
 
-# Calculate explained variance
-explained_variance = pca.explained_variance_ratio_ * 100
+# Loading plot
+loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
 
-
-'''
-# Create a DataFrame with the principal components
-principal_df = pd.DataFrame(data=principal_components, columns=['Principal Component 1', 'Principal Component 2'])
-
-# Plot the scatter plot
-plt.figure(figsize=(8, 6))
-plt.scatter(principal_df['Principal Component 1'], principal_df['Principal Component 2'], alpha=0.5)
-plt.xlabel('Principal Component 1')
-plt.ylabel('Principal Component 2')
-plt.title('PCA Scatter Plot')
-plt.show()
-'''
-
-'''
-# Create a biplot
-def create_biplot(principal_components, pca, df, categories):
-    plt.figure(figsize=(10, 8))
+def biplot(score, loadings, columns, pc_x=0, pc_y=1):
+    plt.figure(figsize=(10, 10))
     
-    # Define colors for each category
-    colors = {'Low': 'blue', 'Medium': 'green', 'High': 'red'}
-
-    # Scatter plot of the principal components
-    for category, color in colors.items():
-        idx = categories == category
-        plt.scatter(principal_components[idx, 0], principal_components[idx, 1], c=color, label=category)
-
-    # Add variable arrows
-    for i, feature in enumerate(df.columns[:n_components]):
-        plt.arrow(0, 0, pca.components_[0, i], pca.components_[1, i],
-                  color='r', alpha=0.5, lw=2)
-        plt.text(pca.components_[0, i], pca.components_[1, i], feature, fontsize=14)
-
-    plt.xlabel(f"Principal Component 1 ({round(pca.explained_variance_ratio_[0] * 100, 2)}%)")
-    plt.ylabel(f"Principal Component 2 ({round(pca.explained_variance_ratio_[1] * 100, 2)}%)")
-    plt.title("PCA Biplot")
-    plt.legend()
+    # Plot the samples (projected onto the principal components)
+    plt.scatter(score[:, pc_x], score[:, pc_y], alpha=0.5)
+    
+    # Plot the loadings (original variables as vectors)
+    for i, txt in enumerate(columns):
+        plt.arrow(0, 0, loadings[i, pc_x], loadings[i, pc_y], color='r', head_width=0.05, head_length=0.1, linewidth=1.5)
+        plt.annotate(txt, (loadings[i, pc_x], loadings[i, pc_y]), fontsize=12, fontweight='bold', color='r')
+        
+    plt.axhline(0, color='black', linewidth=1)
+    plt.axvline(0, color='black', linewidth=1)
+    plt.xlabel(f'Principal Component {pc_x + 1}')
+    plt.ylabel(f'Principal Component {pc_y + 1}')
+    plt.title('PCA Biplot')
+    
+    # Set axis limits based on loadings and scores
+    plt.xlim(min(score[:, pc_x].min(), loadings[:, pc_x].min()) - 0.1, max(score[:, pc_x].max(), loadings[:, pc_x].max()) + 0.1)
+    plt.ylim(min(score[:, pc_y].min(), loadings[:, pc_y].min()) - 0.1, max(score[:, pc_y].max(), loadings[:, pc_y].max()) + 0.1)
+    
     plt.grid()
     plt.show()
+    
+biplot(principal_components, loadings, df.columns)
 
-# Call the create_biplot function with the additional 'categories' argument
-create_biplot(principal_components, pca, df, df['Highest deletion frequency category'])
-
-'''
-
-'''
 
 # Create a scree plot for the explained variance ratio
 plt.figure(figsize=(8, 6))
@@ -195,7 +180,7 @@ plt.title('Scree Plot - Explained Variance Ratio')
 plt.grid()
 plt.show()
 
-'''
+
 # Create a scree plot for the cumulative explained variance
 plt.figure(figsize=(8, 6))
 plt.plot(range(1, len(cumulative_explained_variance) + 1), cumulative_explained_variance, marker='o')
@@ -204,5 +189,5 @@ plt.ylabel('Cumulative Explained Variance')
 plt.title('Scree Plot - Cumulative Explained Variance')
 plt.grid()
 plt.show()
-'''
+
 
