@@ -323,7 +323,6 @@ def predict(seq, cutsite):
   
   return pred_df, stats
 
-
 def get_indel_length_fqs(pred_df):
   # Returns a dataframe
   #   - Indel length
