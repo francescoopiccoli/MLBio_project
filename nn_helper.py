@@ -1,12 +1,10 @@
 import autograd.numpy as np
 from autograd.misc import flatten
 
-
 def relu(x):       return np.maximum(0, x)
 def sigmoid(x):    return 0.5 * (np.tanh(x) + 1.0)
 def logsigmoid(x): return x - np.logaddexp(0, x)
 def leaky_relu(x): return np.maximum(0, x) + np.minimum(0, x) * 0.001
-
 
 # Do forward step (ie compute ouput from input) in the neural network.
 def nn_match_score_function(params, inputs):
@@ -26,13 +24,12 @@ def nn_match_score_function(params, inputs):
   outputs = np.dot(inputs, outW) + outb
   return outputs.flatten()
 
-
-# Backpropagation step.
-
+# Exponential decaying factor for the step size
 def exponential_decay(step_size):
   if step_size > 0.001: step_size *= 0.999
   return step_size
 
+# Backpropagation step.
 def adam_minmin(grad_both, init_params_nn, init_params_nn2, callback=None, num_iters=100, step_size=0.001, b1=0.9, b2=0.999, eps=10**-8):
   x_nn, unflatten_nn = flatten(init_params_nn)
   x_nn2, unflatten_nn2 = flatten(init_params_nn2)

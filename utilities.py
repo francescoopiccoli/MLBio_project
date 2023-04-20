@@ -1,3 +1,5 @@
+# Utility functions from https://github.com/maxwshen/indelphi-dataprocessinganalysis
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -11,7 +13,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 import nn_helper as fw
 import csv
 from mylib import util
-
 
 ##
 # Setup environment

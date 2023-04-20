@@ -128,12 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-
 # macOS files
 .DS_Store
 
 # log directories
 outputaab/
 output/
-output_test/
 research-questions/output-boris-rq

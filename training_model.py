@@ -1,4 +1,4 @@
-# Author: maxwshen, https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/master/src-modeling-and-analysis/d2_model.py
+# Originally https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/master/src-modeling-and-analysis/d2_model.py, Author: maxwshen
 
 # Model including a neural net in autograd
 from __future__ import absolute_import, division
@@ -165,6 +165,7 @@ def main_objective(nn_params, nn2_params, inp, obs, obs2, del_lens, num_samples,
   # LOSS += np.sum((normalized_fq - obs[idx])**2)
   return LOSS / num_samples
 
+
 # Save kNN features
 # The function is basically a copy of main_objective but
 # only with the parts necessary for the kNN feature computation
@@ -244,7 +245,7 @@ def parse_input_data(data):
   exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs = ([] for i in range(6))
 
   # To make this run in a short time, take only the first n elements (i.e. [:n])
-  exps = deletions_data['Sample_Name'].unique()[:10]
+  exps = deletions_data['Sample_Name'].unique()
 
   # Microhomology data has the homology length greater than 0
   mh_data = deletions_data[deletions_data['homologyLength'] != 0]
@@ -292,10 +293,8 @@ if __name__ == '__main__':
   ut.copy_script(out_dir)
   util.ensure_dir_exists(out_dir_params)
 
-
   log_fn = out_dir + '_log_%s.out' % (out_letters)
-  with open(log_fn, 'w') as f:
-    pass
+  with open(log_fn, 'w') as f: pass
 
   counter = 0
   seed = npr.RandomState(1)
@@ -310,7 +309,6 @@ if __name__ == '__main__':
   inp_dir = './input/'
 
   # A pickle file containing a dict object with two keys: counts and del_features.
-
   # The guide names are in the format <guide_id>_<guide sequence>. The guide sequence can be extracted from this id and used to determine the -3, -4 and -5 nucleotides for the kNN insertion model and insertion-type repair outcomes.
   master_data = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
 
@@ -331,7 +329,6 @@ if __name__ == '__main__':
   # and different GC contents, see for example https://github.com/francescoopiccoli/MLBio_project/blob/main/input/del_features_example.csv
   [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
 
-  
   INP = []
   for mhl, gcf in zip(mh_lens, gc_fracs):
     #mhl and gcf are both arrays
@@ -345,9 +342,10 @@ if __name__ == '__main__':
   NAMES = np.array([str(s) for s in exps])
   DEL_LENS = np.array(del_lens)
 
-
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
+
+  util.ensure_dir_exists("output_test")
   ut.save_train_test_names(NAMES_train, NAMES_test, out_dir)
   ut.save_test_targets(NAMES_test)
   
@@ -388,17 +386,18 @@ if __name__ == '__main__':
     
     return None
   
-  # optimized_params = adam_minmin(both_objective_grad,
-  #                                 init_nn_params, 
-  #                                 init_nn2_params, 
-  #                                 step_size = step_size, 
-  #                                 num_iters = num_epochs,
-  #                                 callback = print_perf)
+  print('--- Start training NN1 and NN2 ---')
+  optimized_params = adam_minmin(both_objective_grad,
+                                  init_nn_params, 
+                                  init_nn2_params, 
+                                  step_size = step_size, 
+                                  num_iters = num_epochs,
+                                  callback = print_perf)
 
-  # print('NN_1 and NN_2 successfully trained!')
+  print('--- NN_1 and NN_2 successfully trained! ---')
 
-  # print('Start kNN training')
-  # save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
-  # knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
-  # train_knn(data.reset_index(), pd.read_pickle("model-mlbio/knn_features_from_loss_function.pkl"))
-  # print('kNN features successfully calculated!')
+  print('--- Start training KNN ---')
+  save_knn_features(optimized_params[0], optimized_params[1], INP, DEL_LENS)
+  knn_features = pd.read_pickle('outputaab/parameters/knn_features_from_loss_function.pkl')
+  train_knn(data.reset_index(), knn_features)
+  print('--- KNN features successfully calculated! ---')

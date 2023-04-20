@@ -1,3 +1,5 @@
+# Originally https://github.com/maxwshen/inDelphi-model/blob/master/inDelphi.py
+
 from __future__ import division
 import numpy as np
 import pandas as pd
@@ -51,7 +53,6 @@ def __find_microhomologies(left, right):
   return mhs
 
 def __featurize(seq, cutsite, DELLEN_LIMIT = 28 + 1):
-  # print('Using DELLEN_LIMIT = %s' % (DELLEN_LIMIT))
   mh_lens, gc_fracs, gt_poss, del_lens = [], [], [], []
   for del_len in range(1, DELLEN_LIMIT):
     left = seq[cutsite - del_len : cutsite]
@@ -369,6 +370,96 @@ def add_genotype_column(pred_df, stats):
       gt = seq[:cutsite] + ins_base + seq[cutsite:]
     gts.append(gt)
   new_pred_df['Genotype'] = gts
+  return new_pred_df
+
+def add_name_column(pred_df, stats):
+  names = []
+  seq = stats['Reference sequence'].iloc[0]
+  cutsite = stats['Cutsite'].iloc[0]
+
+  for idx, row in pred_df.iterrows():
+    gt_pos = row['Genotype position']
+    if gt_pos == 'e':
+      name = 'del%s' % (row['Length'])
+    elif row['Category'] == 'del':
+      dl = row['Length']
+      gt_pos = int(gt_pos)
+      name = 'del%s' % (seq[cutsite - dl + gt_pos : cutsite + gt_pos])
+    else:
+      ins_base = row['Inserted Bases']
+      name = 'ins%s' % (ins_base)
+    names.append(name)
+  pred_df['Name'] = names
+  return
+
+def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
+  # Adds genotype-resolution predictions for MH-less genotypes
+  # Be wary: MH-less genotypes have much lower replicability than
+  # microhomology genotypes. 
+  # This is included for user convenience.
+  seq = stats['Reference sequence']
+  cutsite = stats['Cutsite']
+
+  # Add insertions
+  new_pred_df = pred_df[pred_df['Category'] == 'ins']
+
+  # Add MH deletions
+  crit = (pred_df['Genotype position'] != 'e') & (pred_df['Category'] == 'del')
+  new_pred_df = new_pred_df.append(pred_df[crit], ignore_index = True)
+
+  # Add MHless deletions by length
+  if length_cutoff is None:
+    max_del_len = max(pred_df['Length']) + 1
+  else:
+    max_del_len = int(length_cutoff)
+    
+  mhless_dd = defaultdict(list)
+  for del_len in range(max_del_len):
+    crit = (pred_df['Category'] == 'del') & (pred_df['Length'] == del_len) & (pred_df['Genotype position'] == 'e')
+    subset = pred_df[crit]
+    if len(subset) == 0:
+      continue
+    total_freq = subset['Predicted frequency'].iloc[0]
+
+    left = seq[cutsite - del_len : cutsite]
+    right = seq[cutsite : cutsite + del_len]
+    mhs = __find_microhomologies(left, right)
+
+    has0 = bool([0] in mhs)
+    hasN = bool([del_len] in mhs)
+    nummid = 0
+    for idx in range(1, del_len):
+      if [idx] in mhs:
+        nummid += 1
+    hasmid = bool(nummid > 0)
+    num_mhless_cats = sum([has0, hasN, hasmid])
+    if num_mhless_cats == 0:
+      continue
+
+    frac_freq = total_freq / num_mhless_cats
+    total_freq_added = 0
+
+    for gt_pos, flag in zip([0, del_len], [has0, hasN]):
+      if flag:
+        mhless_dd['Genotype position'].append(gt_pos)
+        mhless_dd['Length'].append(del_len)
+        mhless_dd['Predicted frequency'].append(frac_freq)
+        total_freq_added += frac_freq
+
+    for idx in range(1, del_len):
+      mid_pos = idx
+      if [mid_pos] in mhs:
+        mhless_dd['Genotype position'].append(mid_pos)
+        mhless_dd['Length'].append(del_len)
+        mhless_dd['Predicted frequency'].append(frac_freq / nummid)
+        total_freq_added += frac_freq / nummid
+
+  mhless_df = pd.DataFrame(mhless_dd)
+  mhless_df['Category'] = 'del'
+  mhless_df['Cat'] = 'mh-less del'
+  mhless_df['Microhomology length'] = 0
+  new_pred_df = new_pred_df.append(mhless_df, ignore_index = True)
+
   return new_pred_df
 
 ##

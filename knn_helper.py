@@ -1,14 +1,13 @@
-#Source: https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/635a10c4da2415173c24243230faedca32a7092c/src-modeling-and-analysis/e5_ins_ratebpmodel.py
+# Originally https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/635a10c4da2415173c24243230faedca32a7092c/src-modeling-and-analysis/e5_ins_ratebpmodel.py
+# with some parts taken from https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/635a10c4da2415173c24243230faedca32a7092c/src-modeling-and-analysis/fi2_ins_ratio.py
 
 from __future__ import division
-#import _config, _lib, _data, _predict, _predict2
-import sys, os, pickle
+import os, pickle
 import numpy as np
 from collections import defaultdict
 from mylib import util
 import pandas as pd
 from sklearn.neighbors import KNeighborsRegressor
-
 
 ##
 # Setup environment
@@ -34,7 +33,7 @@ out_letters = alphabetize(num_folds + 1)
 out_dir = out_place + out_letters + '/'
 
 ##
-# Functions
+# Helper functions
 ##
 def convert_oh_string_to_nparray(input):
     return np.array([int(s) for s in input])
@@ -237,7 +236,6 @@ def calc_statistics_1bp(df, exp, alldf_dict):
   return alldf_dict
 
 def train_knn(count_and_deletion_df, knn_features):
-  print('Generating KNN Model')
   global out_dir
   util.ensure_dir_exists(out_dir)
   rate_stats, bp_stats = prepare_statistics(knn_features, count_and_deletion_df)

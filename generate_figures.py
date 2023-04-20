@@ -9,9 +9,6 @@ from pandas.plotting import table
 from scipy.stats import gaussian_kde
 from mylib import util
 
-def plot_figure_1e_trend():
-    pass
-
 # Render df as a table to generate figure
 def render_mpl_table(df, col_width):
     plt.rcParams["font.family"] = "monospace"
@@ -148,8 +145,6 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
     pd.reset_option('display.max_rows')
     fig = render_mpl_table(pd.concat(total_df), col_width=4.0)
     fig.savefig("figures/figure_1e.png",dpi=300, bbox_inches = "tight")
-
-    plot_figure_1e_trend()
 
 
 def generate_figure_3f(test_targets):
