@@ -76,7 +76,7 @@ Create the following python script:
 ```
 import inDelphi
 
-# Pass a target sequence and a cutsite
+# Pass a sample target sequence and the respective cutsite
 pred_df, stats = inDelphi.predict('GTCAAAGTCCATTATTCGAAATCCAATCCAAGGTCACTGGAATTTGTTGATTAAG', 27)
 ```
 
@@ -89,7 +89,7 @@ To reproduce the results, simply run the following command within the `research-
 python boris-rq.py
 ```
 
-This script should generate a folder structure `output-boris-rq/ten-fold-crossvalidation` inside `research-questions`. It will contain the logs of each fold, for each model, as well as the saved weights after 50 epochs for each fold. When the crossvalidation ends, it generates statistics and plots that can be found in the report, namely:
+This script should generate a folder structure `output-boris-rq/ten-fold-crossvalidation` inside `research-questions`. It will contain the logs of each fold, for each model, as well as the saved weights after 50 epochs for each fold. When the crossvalidation ends, it generates statistics and displays the plots that can be found in the report. Here is the total output of running the script:
 
 - Histogram and PDF of fold differences
 - Mean, STD, median and skew of fold differences
