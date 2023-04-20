@@ -198,6 +198,8 @@ def save_knn_features(nn_params, nn2_params, inp, del_lens):
     unnormalized_fq = unnormalized_fq + mhfull_contribution
     normalized_fq = np.divide(unnormalized_fq, np.sum(unnormalized_fq))
 
+
+
     dls = np.arange(1, 28+1)
     dls = dls.reshape(28, 1)
     nn2_scores = fw.nn_match_score_function(nn2_params, dls)
@@ -355,8 +357,7 @@ if __name__ == '__main__':
 
   ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = seed)
   INP_train, INP_test, OBS_train, OBS_test, OBS2_train, OBS2_test, NAMES_train, NAMES_test, DEL_LENS_train, DEL_LENS_test = ans
-  francesco_rq_ans = [ans[0], ans[1], ans[3], ans[-2], ans[-1]]
-  pickle.dump(francesco_rq_ans, open(out_dir + '/francesco_rq_ans.pkl', 'wb'))
+  pickle.dump(ans, open(out_dir + '/francesco_rq_ans.pkl', 'wb'))
 
   ut.save_train_test_names(NAMES_train, NAMES_test, out_dir)
   ut.save_test_targets(NAMES_test)
