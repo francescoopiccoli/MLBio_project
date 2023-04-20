@@ -159,11 +159,11 @@ def generate_figure_3f(test_targets):
         highest_ins_freq_list.append(stats["Highest ins frequency"])
 
     # Make a histogram of the frequencies
-    kde = gaussian_kde(highest_del_freq_list)
+    # kde = gaussian_kde(highest_del_freq_list)
     fig, ax = plt.subplots(1, 1)
-    x = np.linspace(0, 100, 1000)
-    ax.hist(highest_del_freq_list, bins = 100, density=True, color = 'red', alpha = 0.5)
-    ax.plot(x, kde(x), linewidth=2, color='c')
+    # x = np.linspace(0, 100, 1000)
+    ax.hist(highest_del_freq_list, bins = 100, density=False, color = 'red', alpha = 0.5)
+    # ax.plot(x, kde(x), linewidth=2, color='c')
     # Adds labels to the figure
     ax.set_xlabel('Most frequent deletion genotype (%)')
     ax.set_ylabel('Number of gRNAs')
@@ -171,11 +171,11 @@ def generate_figure_3f(test_targets):
     # Save figure to output folder
     fig.savefig("figures/figure_3f_deletions.png",dpi=300, bbox_inches = "tight")
 
-    kde2 = gaussian_kde(highest_ins_freq_list)
+    # kde2 = gaussian_kde(highest_ins_freq_list)
     fig2, ax2 = plt.subplots(1, 1)
-    x = np.linspace(0, 30, 150)
-    ax2.hist(highest_ins_freq_list, bins = 15, density=True, color = 'blue', alpha = 0.5)
-    ax2.plot(x, kde2(x), linewidth=2, color='k')
+    # x = np.linspace(0, 30, 150)
+    ax2.hist(highest_ins_freq_list, bins = 15, density=False, color = 'blue', alpha = 0.5)
+    # ax2.plot(x, kde2(x), linewidth=2, color='k')
     # Adds labels to the figure
     ax2.set_xlabel('Most frequent insertion genotype (%)')
     ax2.set_ylabel('Number of gRNAs')
