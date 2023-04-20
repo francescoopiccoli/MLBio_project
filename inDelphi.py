@@ -1,9 +1,10 @@
+# Originally https://github.com/maxwshen/inDelphi-model/blob/master/inDelphi.py
+
 from __future__ import division
 import numpy as np
 import pandas as pd
 from collections import defaultdict
 import os, pickle, copy
-import sklearn
 from scipy.stats import entropy
 
 init_flag = False
@@ -52,7 +53,6 @@ def __find_microhomologies(left, right):
   return mhs
 
 def __featurize(seq, cutsite, DELLEN_LIMIT = 28 + 1):
-  # print('Using DELLEN_LIMIT = %s' % (DELLEN_LIMIT))
   mh_lens, gc_fracs, gt_poss, del_lens = [], [], [], []
   for del_len in range(1, DELLEN_LIMIT):
     left = seq[cutsite - del_len : cutsite]
@@ -324,35 +324,6 @@ def predict(seq, cutsite):
   
   return pred_df, stats
 
-##
-# Process predictions
-##
-# Not used
-def get_frameshift_fqs(pred_df):
-  # Returns a dataframe
-  #   - Frame
-  #   - Predicted frequency
-  #
-  fsd = {'+0': 0, '+1': 0, '+2': 0}
-
-  crit = (pred_df['Category'] == 'ins')
-  ins1_fq = sum(pred_df[crit]['Predicted frequency'])
-  fsd['+1'] += ins1_fq
-
-  for del_len in set(pred_df['Length']):
-    crit = (pred_df['Category'] == 'del') & (pred_df['Length'] == del_len)
-    fq = sum(pred_df[crit]['Predicted frequency'])
-    fs = (-1 * del_len) % 3
-    fsd['+%s' % (fs)] += fq
-
-  d = defaultdict(list)
-  d['Frame'] = list(fsd.keys())
-  d['Predicted frequency'] = list(fsd.values())
-  df = pd.DataFrame(d)
-  df = df.sort_values(by = 'Frame')
-  df = df.reset_index(drop = True)
-  return df
-
 def get_indel_length_fqs(pred_df):
   # Returns a dataframe
   #   - Indel length
@@ -372,25 +343,6 @@ def get_indel_length_fqs(pred_df):
 
   df = pd.DataFrame(d)
   return df  
-
-# Not used
-def get_highest_frequency_indel(pred_df):
-  # Returns a row of pred_df
-  highest_fq = max(pred_df['Predicted frequency'])
-  row = pred_df[pred_df['Predicted frequency'] == highest_fq]
-  return row.iloc[0]
-
-# Not used
-def get_highest_frequency_length(pred_df):
-  idd = get_indel_length_fqs(pred_df)
-  highest_fq = max(idd['Predicted frequency'])
-  row = idd[idd['Predicted frequency'] == highest_fq]
-  return row.iloc[0]
-
-# Not used
-def get_precision(pred_df):
-  # Returns a row of pred_df
-  return 1 - entropy(pred_df['Predicted frequency']) / np.log(len(pred_df))
 
 ##
 # Data reformatting
@@ -420,7 +372,6 @@ def add_genotype_column(pred_df, stats):
   new_pred_df['Genotype'] = gts
   return new_pred_df
 
-# Not used
 def add_name_column(pred_df, stats):
   names = []
   seq = stats['Reference sequence'].iloc[0]
@@ -441,7 +392,6 @@ def add_name_column(pred_df, stats):
   pred_df['Name'] = names
   return
 
-# Not used
 def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
   # Adds genotype-resolution predictions for MH-less genotypes
   # Be wary: MH-less genotypes have much lower replicability than
@@ -506,12 +456,11 @@ def add_mhless_genotypes(pred_df, stats, length_cutoff = None):
 
   mhless_df = pd.DataFrame(mhless_dd)
   mhless_df['Category'] = 'del'
+  mhless_df['Cat'] = 'mh-less del'
   mhless_df['Microhomology length'] = 0
   new_pred_df = new_pred_df.append(mhless_df, ignore_index = True)
 
   return new_pred_df
-
-
 
 ##
 # Init
@@ -558,4 +507,3 @@ def init_model(celltype = 'mESC'):
 
   print('Done')
   return
-

@@ -1,14 +1,13 @@
-#Source: https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/635a10c4da2415173c24243230faedca32a7092c/src-modeling-and-analysis/e5_ins_ratebpmodel.py
+# Originally https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/635a10c4da2415173c24243230faedca32a7092c/src-modeling-and-analysis/e5_ins_ratebpmodel.py
+# with some parts taken from https://github.com/maxwshen/indelphi-dataprocessinganalysis/blob/635a10c4da2415173c24243230faedca32a7092c/src-modeling-and-analysis/fi2_ins_ratio.py
 
 from __future__ import division
-#import _config, _lib, _data, _predict, _predict2
-import sys, os, pickle
+import os, pickle
 import numpy as np
 from collections import defaultdict
 from mylib import util
 import pandas as pd
 from sklearn.neighbors import KNeighborsRegressor
-
 
 ##
 # Setup environment
@@ -34,7 +33,7 @@ out_letters = alphabetize(num_folds + 1)
 out_dir = out_place + out_letters + '/'
 
 ##
-# Functions
+# Helper functions
 ##
 def convert_oh_string_to_nparray(input):
     return np.array([int(s) for s in input])
@@ -72,7 +71,6 @@ def featurize(rate_stats, Y_nm):
     del_scores = (del_scores - np.mean(del_scores)) / np.std(del_scores)
 
     X = np.concatenate(( gtag, ent, del_scores), axis = 1)
-    feature_names = ['5G', '5T', '3A', '3G', 'Entropy', 'DelScore']
 
     return X, Y, Normalizer
 
@@ -208,33 +206,32 @@ def calc_statistics(df, exp, alldf_dict, count_and_deletion_df, knn_features):
 def calc_statistics_1bp(df, exp, alldf_dict):
 
   df["Frequency"] = df["countEvents"] / sum(df["countEvents"])
-  df = df[(df['Type'] == 'INSERTION') & (df['Indel'].str.startswith('1+'))]
-  
-  if sum(df['countEvents']) <= 100:
+  one_bp_insertion_df = df[(df['Type'] == 'INSERTION') & (df['Indel'].str.startswith('1+'))]
+  if sum(one_bp_insertion_df['countEvents']) <= 100:
     return
   
   alldf_dict['_Experiment'].append(exp)
-  onebp_freq = sum(df['Frequency'])
+  onebp_freq = sum(one_bp_insertion_df['Frequency'])
   try:
-    a_frac = sum(df[df['Indel'].str.endswith('A')]['Frequency']) / onebp_freq
+    a_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('A')]['Frequency']) / onebp_freq
   except:
     a_frac = 0
   alldf_dict['A frac'].append(a_frac)
 
   try:
-    c_frac = sum(df[df['Indel'].str.endswith('C')]['Frequency']) / onebp_freq
+    c_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('C')]['Frequency']) / onebp_freq
   except:
     c_frac = 0
   alldf_dict['C frac'].append(c_frac)
 
   try:
-    g_frac = sum(df[df['Indel'].str.endswith('G')]['Frequency']) / onebp_freq
+    g_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('G')]['Frequency']) / onebp_freq
   except:
     g_frac = 0
   alldf_dict['G frac'].append(g_frac)
 
   try:
-    t_frac = sum(df[df['Indel'].str.endswith('T')]['Frequency']) / onebp_freq
+    t_frac = sum(one_bp_insertion_df[one_bp_insertion_df['Indel'].str.endswith('T')]['Frequency']) / onebp_freq
   except:
     t_frac = 0
   alldf_dict['T frac'].append(t_frac)
@@ -244,8 +241,7 @@ def calc_statistics_1bp(df, exp, alldf_dict):
   alldf_dict['Base'].append(fivebase)
   return alldf_dict
 
-def train_knn(count_and_deletion_df, knn_features=pd.read_pickle("model-mlbio/knn_features_from_loss_function.pkl")):
-  print('Generating KNN Model')
+def train_knn(count_and_deletion_df, knn_features):
   global out_dir
   util.ensure_dir_exists(out_dir)
   rate_stats, bp_stats = prepare_statistics(knn_features, count_and_deletion_df)
