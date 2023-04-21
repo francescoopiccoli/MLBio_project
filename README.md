@@ -95,3 +95,16 @@ This script should generate a folder structure `output-boris-rq/ten-fold-crossva
 - Mean, STD, median and skew of fold differences
 - Sign test results
 - Wilcoxon test results
+
+### Sirada Kaewchino
+In order to reproduce the figures, run the following commands within the `research-questions` directory:
+```
+python sirada-rq.py
+```
+The main parts are:
+Part 1: Get the observed deletion values from the pickle file and save it as a csv file, `output_sirada.csv`, which contains the higest deletion frequency, the highest MH deletion frequency, highest MH less deltion frequency and the highest deletion frequency lenght.
+Part 2: Applying PCA
+Part 3: Plotting the figures
+- Scree plot
+- Scatter plot 
+- Loading plot 
