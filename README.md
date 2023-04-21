@@ -110,7 +110,7 @@ Part 3: Plotting the figures
 - Loading plot
 
 ### Francesco Piccoli
-In order to reproduce the figures, run the following commands within the research-questions directory:
+In order to reproduce the figures, run the following commands:
 ```
 git checkout rq-francesco
 python francesco-rq.py
