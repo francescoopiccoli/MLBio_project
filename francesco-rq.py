@@ -124,15 +124,6 @@ def find_del_genotype_freq_permutation_feature_importance():
     # Conver the list of arrays to a 2D numpy array
     importances_means = np.array(importances_means)
 
-    
-    """_, ax = plt.subplots(figsize=(8,6))
-    scatter = ax.scatter(importances_means[:, 0], importances_means[:, 1], c=importances_means[:, 2], cmap='viridis')
-    ax.set_xlabel('MH length')
-    ax.set_ylabel('GC content')
-    cbar = plt.colorbar(scatter)
-    cbar.set_label('Del length permutation feature importance mean')
-    plt.savefig("scatter.png")"""
-
     # Density plot
     _, ax = plt.subplots(figsize=(8,6))
     sns.kdeplot(importances_means[:, 0], label="MH length", ax=ax)
@@ -230,44 +221,53 @@ def find_SHAP_values():
 
 def save_SHAP_figures():
     shap_values_one = pickle.load(open('SHAP_nn_one_shap_values.pkl', 'rb'))
-    X_test = pickle.load(open('SHAP_nn_one_test_inputs.pkl', 'rb'))
+    # X_test = pickle.load(open('SHAP_nn_one_test_inputs.pkl', 'rb'))
 
     shap_values_one.feature_names = ['MH length', 'GC content', 'Deletion length']
+    fig1 = plt.figure()
     shap.plots.beeswarm(shap_values_one, show=False)
-    print(shap_values_one[:, 0].values)
-    plt.scatter(shap_values_one[:, 0].values, shap_values_one[:, 1].values, c=shap_values_one[:, 2].values, cmap='viridis', alpha=0.5)
-    plt.xlabel('SHAP value of MH length')
-    plt.ylabel('SHAP value of GC content')
+    # plt.scatter(shap_values_one[:, 0].values, shap_values_one[:, 1].values, c=shap_values_one[:, 2].values, cmap='viridis', alpha=0.5)
+    # plt.xlabel('SHAP value of MH length')
+    # plt.ylabel('SHAP value of GC content')
     plt.colorbar()
-    plt.tight_layout()
-    plt.show()
-    plt.savefig('nn1_beeswarm_.png')
+    fig1.tight_layout()
+    # plt.show()
+    fig1.savefig('nn1_beeswarm_.png')
+    fig2 = plt.figure()
     shap.plots.scatter(shap_values_one[:, 'MH length'], color=shap_values_one, show=False)
-    plt.tight_layout()
-    plt.savefig('nn1_scatter_MH_length.png')
+    fig2.tight_layout()
+    fig2.savefig('nn1_scatter_MH_length.png')
+    fig3 = plt.figure()
     shap.plots.scatter(shap_values_one[:, 'GC content'], color=shap_values_one, show=False)
-    plt.tight_layout()
-    plt.savefig('nn1_scatter_GC_content.png')
+    fig3.tight_layout()
+    fig3.savefig('nn1_scatter_GC_content.png')
+    fig4 = plt.figure()
     shap.plots.scatter(shap_values_one[:, 'Deletion length'], color=shap_values_one, show=False)
-    plt.tight_layout()
-    plt.savefig('nn1_scatter_DEL_length.png')
+    fig4.tight_layout()
+    fig4.savefig('nn1_scatter_DEL_length.png')
+    fig45 = plt.figure()
     shap.plots.bar(shap_values_one, show=False)
-    plt.tight_layout()
-    plt.savefig('nn1_bar.png')
+    fig45.tight_layout()
+    fig45.savefig('nn1_bar.png')
+    fig5 = plt.figure()
     shap.plots.heatmap(shap_values_one[:1000], show=False)
-    plt.tight_layout()
-    plt.savefig('nn1_heatmap.png')
+    fig5.tight_layout()
+    fig5.savefig('nn1_heatmap.png')
+    fig6 = plt.figure()
     shap.summary_plot(shap_values_one[:1000], show=False)
-    plt.tight_layout()
-    plt.savefig('nn1_summary_plot.png')
+    fig6.tight_layout()
+    fig6.savefig('nn1_summary_plot.png')
     shap_values_two = pickle.load(open('SHAP_nn_two_shap_values.pkl', 'rb'))
     shap_values_two.feature_names = ['Deletion length']
+    fig7 = plt.figure()
     shap.plots.beeswarm(shap_values_two, show=False)
-    plt.tight_layout()
-    plt.savefig('nn2_beeswarm.png')
+    fig7.tight_layout()
+    fig7.savefig('nn2_beeswarm.png')
+    fig8 = plt.figure()
     shap.plots.scatter(shap_values_two, show=False)
-    plt.tight_layout()
-    plt.savefig('nn2_scatter.png')
+    fig8.tight_layout()
+    fig8.savefig('nn2_scatter.png')
+    plt.close("all")
 
 def find_SHAP_values_knn():
   model = pickle.load(open('model-mlbio/rate_model_v2.pkl', 'rb'))
@@ -284,54 +284,32 @@ def find_SHAP_values_knn():
 def save_SHAP_figures_knn():
   shap_values = pickle.load(open('shap_values_knn.pkl', 'rb'))
   shap_values.feature_names = ['-4G freq', '-4T freq', '-3A freq', '-3G freq', 'Precision score', 'DelScore (Total Phi)']
+  fig1 = plt.figure()
   shap.plots.beeswarm(shap_values, show=False)
-  plt.tight_layout()
-
-  plt.savefig('knn_beeswarm.png')
-  plt.show()
+  fig1.tight_layout()
+  fig1.savefig('knn_beeswarm.png')
+  # plt.show()
+  fig2 = plt.figure()
   shap.plots.scatter(shap_values, show=False)
-  plt.tight_layout()
-  plt.savefig('knn_scatter.png')
-  plt.show()
+  fig2.tight_layout()
+  fig2.savefig('knn_scatter.png')
+  # plt.show()
+  fig3 = plt.figure()
   shap.plots.bar(shap_values, show=False)
-  plt.tight_layout()
-  plt.savefig('knn_bar.png')
-  plt.show()
+  fig3.tight_layout()
+  fig3.savefig('knn_bar.png')
+  # plt.show()
+  fig4 = plt.figure()
   shap.plots.heatmap(shap_values, show=False)
-  plt.tight_layout()
-  plt.savefig('knn_heatmap.png')
-  plt.show()
+  fig4.tight_layout()
+  fig4.savefig('knn_heatmap.png')
+  # plt.show()
+  fig5 = plt.figure()
   shap.summary_plot(shap_values, show=False)
-  plt.tight_layout()
-  plt.savefig('knn_summary_plot.png')
-  plt.show()
-
-"""def save_train_and_test_data():
-    inp_dir = './input/'
-
-    master_data = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
-    counts = master_data['counts'].drop('fraction', axis=1)
-    del_features = master_data['del_features']
-    data = pd.concat((counts, del_features), axis=1)
-
-    [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
-
-    INP = []
-    for mhl, gcf in zip(mh_lens, gc_fracs):
-        inp_point = np.array([mhl, gcf]).T
-        INP.append(inp_point)
-    INP = np.array(INP)
-    OBS = np.array(freqs)
-    OBS2 = np.array(dl_freqs)
-    global NAMES
-    NAMES = np.array([str(s) for s in exps])
-    DEL_LENS = np.array(del_lens)
-
-    ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = npr.RandomState(1))
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    with open(out_dir + 'francesco_rq_ans.pkl', 'wb') as f:
-        pickle.dump(ans, f)"""
+  fig5.tight_layout()
+  fig5.savefig('knn_summary_plot.png')
+  # plt.show()
+  plt.close("all")
 
 if __name__ == '__main__':
     global nn_one_params, nn_two_params
@@ -339,6 +317,7 @@ if __name__ == '__main__':
     nn_two_params = pickle.load(open('model-mlbio/aae_nn2.pkl', 'rb'))
 
     find_del_length_freq_permutation_feature_importance()
+    find_del_genotype_freq_permutation_feature_importance()
     find_SHAP_values()
     save_SHAP_figures()
     find_SHAP_values_knn()
