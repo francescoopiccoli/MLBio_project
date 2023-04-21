@@ -146,7 +146,7 @@ def generate_prediced_vs_observed_frequency_trend(test_sequences, cutsite, obser
     plt.plot(x, y1, label='Observed max freq.')
     plt.plot(x, y2, label='Predicted max freq.')
 
-    plt.title('Predicted Max Frequency vs Observed Max Frequency')
+    plt.title('Predicted Max Frequency vs Respective Observed Max Frequency')
     plt.xlabel('Target Site')
     plt.ylabel('Frequency')
     plt.legend()
