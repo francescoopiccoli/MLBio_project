@@ -107,4 +107,18 @@ Part 2: Applying PCA
 Part 3: Plotting the figures
 - Scree plot
 - Scatter plot 
-- Loading plot 
+- Loading plot
+
+### Francesco Piccoli
+In order to reproduce the figures, run the following commands within the research-questions directory:
+```
+git checkout rq-francesco
+python francesco-rq.py
+```
+
+### Wessel Oosterbroek
+In order to reproduce the figures in the research report, run the following command using python 3.9(+)
+```
+python wessel-rq.py
+```
+The script will then output the decision tree rules in the console, as well as, display each of the figures one by one.
