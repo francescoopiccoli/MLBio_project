@@ -1,15 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import pickle
-
 import shap
 from sklearn.inspection import permutation_importance
 from sklearn.base import BaseEstimator
 import seaborn as sns
 from inDelphi import __nn_function
-
-out_folder = "outputaab"
+from mylib import util
 
 
 # Define a class that wraps the frequencies prediction functions
@@ -109,8 +106,7 @@ def nn_two_predict_mh_less_phi_score(inputs):
 
 
 def find_del_genotype_freq_permutation_feature_importance():
-    
-    francesco_rq_ans = pickle.load(open('outputaab/francesco_rq_ans.pkl', 'rb'))
+    francesco_rq_ans = pickle.load(open('francesco_rq_ans.pkl', 'rb'))
     _, INP_test, _, OBS_test, _, _, _, _, _, DEL_LENS_test = francesco_rq_ans
  
     del_genotype_freq_predictor = FrequencyPredictor(predict_del_genotype_freq_distribution)
@@ -147,9 +143,10 @@ def find_del_genotype_freq_permutation_feature_importance():
     ax.legend()
     plt.savefig("del_genotype_freq_feature_importance_estimated_pdf.png")
 
+
 def find_del_length_freq_permutation_feature_importance():
 
-    francesco_rq_ans = pickle.load(open('outputaab/francesco_rq_ans.pkl', 'rb'))
+    francesco_rq_ans = pickle.load(open('francesco_rq_ans.pkl', 'rb'))
     _, INP_test, _, _, _, OBS2_test, _, _, _, DEL_LENS_test = francesco_rq_ans
     # One for each target site, the observed frequency of each deletion genotype, 15 % of the total dataset ie around 300 target sites
     del_length_freq_predictor = FrequencyPredictor(predict_del_length_freq_distribution)
@@ -179,7 +176,7 @@ def find_del_length_freq_permutation_feature_importance():
 
 
 def find_SHAP_values():
-    francesco_rq_ans = pickle.load(open('outputaab/francesco_rq_ans.pkl', 'rb'))
+    francesco_rq_ans = pickle.load(open('francesco_rq_ans.pkl', 'rb'))
     INP_train, INP_test, _, _, _, _, _, _, DEL_LENS_train, DEL_LENS_test = francesco_rq_ans
     # Ungroup the rows by target site, consider all the rows as independent from their target site
     del_feature_train = np.concatenate(DEL_LENS_train).ravel()
@@ -211,9 +208,9 @@ def find_SHAP_values():
     nn_one_shap_values.feature_names = ['MH length', 'GC content', 'Deletion length']
 
     
-    pickle.dump(sampled_nn_one_train_inputs, open('outputaab/SHAP_nn_one_train_inputs.pkl', 'wb'))
-    pickle.dump(nn_one_test_inputs, open('outputaab/SHAP_nn_one_test_inputs.pkl', 'wb'))
-    pickle.dump(nn_one_shap_values, open('outputaab/SHAP_nn_one_shap_values.pkl', 'wb'))
+    pickle.dump(sampled_nn_one_train_inputs, open('SHAP_nn_one_train_inputs.pkl', 'wb'))
+    pickle.dump(nn_one_test_inputs, open('SHAP_nn_one_test_inputs.pkl', 'wb'))
+    pickle.dump(nn_one_shap_values, open('SHAP_nn_one_shap_values.pkl', 'wb'))
 
 
     nn_two_train_inputs = del_feature_train.reshape((len(del_feature_train), 1))
@@ -226,14 +223,14 @@ def find_SHAP_values():
     nn_two_explainer = shap.Explainer(nn_two_predict_mh_less_phi_score, sampled_nn_two_train_inputs)
     nn_two_shap_values = nn_two_explainer(nn_two_test_inputs)
 
-    pickle.dump(sampled_nn_two_train_inputs, open('outputaab/SHAP_nn_two_train_inputs.pkl', 'wb'))
-    pickle.dump(nn_two_test_inputs, open('outputaab/SHAP_nn_two_test_inputs.pkl', 'wb'))
-    pickle.dump(nn_two_shap_values, open('outputaab/SHAP_nn_two_shap_values.pkl', 'wb'))
+    pickle.dump(sampled_nn_two_train_inputs, open('SHAP_nn_two_train_inputs.pkl', 'wb'))
+    pickle.dump(nn_two_test_inputs, open('SHAP_nn_two_test_inputs.pkl', 'wb'))
+    pickle.dump(nn_two_shap_values, open('SHAP_nn_two_shap_values.pkl', 'wb'))
 
 
 def save_SHAP_figures():
-    shap_values_one = pickle.load(open('outputaab/SHAP_nn_one_shap_values.pkl', 'rb'))
-    X_test = pickle.load(open('outputaab/SHAP_nn_one_test_inputs.pkl', 'rb'))
+    shap_values_one = pickle.load(open('SHAP_nn_one_shap_values.pkl', 'rb'))
+    X_test = pickle.load(open('SHAP_nn_one_test_inputs.pkl', 'rb'))
 
     shap_values_one.feature_names = ['MH length', 'GC content', 'Deletion length']
     shap.plots.beeswarm(shap_values_one, show=False)
@@ -263,7 +260,7 @@ def save_SHAP_figures():
     shap.summary_plot(shap_values_one[:1000], show=False)
     plt.tight_layout()
     plt.savefig('nn1_summary_plot.png')
-    shap_values_two = pickle.load(open('outputaab/SHAP_nn_two_shap_values.pkl', 'rb'))
+    shap_values_two = pickle.load(open('SHAP_nn_two_shap_values.pkl', 'rb'))
     shap_values_two.feature_names = ['Deletion length']
     shap.plots.beeswarm(shap_values_two, show=False)
     plt.tight_layout()
@@ -274,18 +271,18 @@ def save_SHAP_figures():
 
 def find_SHAP_values_knn():
   model = pickle.load(open('model-mlbio/rate_model_v2.pkl', 'rb'))
-  X = pickle.load(open('outputaab/X_knn.pkl', 'rb'))
+  X = pickle.load(open('model-mlbio/X_knn.pkl', 'rb'))
   print(X)
   print(model)
   # Tranform the entropy into a precision score
   X[:, 4] = 1 - X[:, 4]
   explainer = shap.Explainer(model.predict, X)
   shap_values = explainer(X)
-  pickle.dump(shap_values, open('outputaab/shap_values_knn.pkl', 'wb'))
+  pickle.dump(shap_values, open('shap_values_knn.pkl', 'wb'))
   
 
 def save_SHAP_figures_knn():
-  shap_values = pickle.load(open('outputaab/shap_values_knn.pkl', 'rb'))
+  shap_values = pickle.load(open('shap_values_knn.pkl', 'rb'))
   shap_values.feature_names = ['-4G freq', '-4T freq', '-3A freq', '-3G freq', 'Precision score', 'DelScore (Total Phi)']
   shap.plots.beeswarm(shap_values, show=False)
   plt.tight_layout()
@@ -309,6 +306,32 @@ def save_SHAP_figures_knn():
   plt.savefig('knn_summary_plot.png')
   plt.show()
 
+"""def save_train_and_test_data():
+    inp_dir = './input/'
+
+    master_data = pickle.load(open(inp_dir + 'inDelphi_counts_and_deletion_features.pkl', 'rb'))
+    counts = master_data['counts'].drop('fraction', axis=1)
+    del_features = master_data['del_features']
+    data = pd.concat((counts, del_features), axis=1)
+
+    [exps, mh_lens, gc_fracs, del_lens, freqs, dl_freqs] = parse_input_data(data)
+
+    INP = []
+    for mhl, gcf in zip(mh_lens, gc_fracs):
+        inp_point = np.array([mhl, gcf]).T
+        INP.append(inp_point)
+    INP = np.array(INP)
+    OBS = np.array(freqs)
+    OBS2 = np.array(dl_freqs)
+    global NAMES
+    NAMES = np.array([str(s) for s in exps])
+    DEL_LENS = np.array(del_lens)
+
+    ans = train_test_split(INP, OBS, OBS2, NAMES, DEL_LENS, test_size = 0.15, random_state = npr.RandomState(1))
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    with open(out_dir + 'francesco_rq_ans.pkl', 'wb') as f:
+        pickle.dump(ans, f)"""
 
 if __name__ == '__main__':
     global nn_one_params, nn_two_params
