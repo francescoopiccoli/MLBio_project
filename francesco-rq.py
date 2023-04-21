@@ -236,7 +236,7 @@ def save_SHAP_figures():
     X_test = pickle.load(open('outputaab/SHAP_nn_one_test_inputs.pkl', 'rb'))
 
     shap_values_one.feature_names = ['MH length', 'GC content', 'Deletion length']
-    #shap.plots.beeswarm(shap_values_one, show=False)
+    shap.plots.beeswarm(shap_values_one, show=False)
     print(shap_values_one[:, 0].values)
     plt.scatter(shap_values_one[:, 0].values, shap_values_one[:, 1].values, c=shap_values_one[:, 2].values, cmap='viridis', alpha=0.5)
     plt.xlabel('SHAP value of MH length')
