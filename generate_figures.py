@@ -89,6 +89,70 @@ def set_genotype(pred_df, stats):
   new_pred_df['Genotype'] = exps
   return new_pred_df
 
+# Generate a plot showing observed vs predicted frequencies for each test sequence
+def generate_prediced_vs_observed_frequency_trend(test_sequences, cutsite, observed_freqs):
+    pd.set_option('display.max_colwidth', 199)
+
+    total_df = []
+
+    for sequence in test_sequences:
+        # Get predictions and statistics
+        pred_df, stats = inDelphi.predict(sequence, cutsite)
+
+        # Needed because of python version
+        pred_df = pred_df.rename(columns={'Genotype position': 'Genotype_position'})
+
+        # Correctly identify insertions
+        insQuery = '(Category == \'ins\')'
+        pred_df.loc[pred_df.query(insQuery).index,'Cat'] = "ins"
+
+        # Correctly identify mh deletions
+        mhQuery = '(Category == \'del\') & (Genotype_position != \'e\')'
+        pred_df.loc[pred_df.query(mhQuery).index,'Cat'] = "mh del"
+
+        # Needed because of python version
+        pred_df = pred_df.rename(columns={'Genotype_position': 'Genotype position'})
+
+        # Add mhless_genotypes
+        pred_df = inDelphi.add_mhless_genotypes(pred_df, stats)
+
+        # Add a genotype column
+        pred_df = inDelphi.add_genotype_column(pred_df, stats)
+
+        # Set cut line and add inserted nucleotides to genotype
+        pred_df = set_genotype(pred_df, stats)
+
+        # Add indel column & observed frequencies
+        pred_df = add_indel_column(pred_df, stats, observed_freqs)
+        
+        # Get the top 6 most frequent repair outcomes
+        pred_df = pred_df.rename(columns={'Predicted frequency': 'Pred.%'})
+        sorted_df = pred_df.sort_values(by='Obs.%', ascending=False).head(6)[['Genotype', 'Cat', 'Obs.%', 'Pred.%']]
+
+        # Round all columns to 1 decimal
+        sorted_df = sorted_df.round(1)
+
+        # Add result of this sequence to dataframe used to generate the figure
+        total_df.append(sorted_df)
+
+    pd.reset_option('display.max_rows')
+    total_df = pd.concat(total_df)
+    x = list(range(0, 48))
+    y1 = total_df["Obs.%"]
+    y2 = total_df["Pred.%"]
+
+    plt.clf()
+    plt.figure().set_figwidth(15)
+    plt.plot(x, y1, label='Observed freq.')
+    plt.plot(x, y2, label='Predicted freq.')
+
+    plt.title('Predicted Frequency vs Observed Frequency')
+    plt.xlabel('Target Site')
+    plt.ylabel('Frequency')
+    plt.legend()
+
+    plt.savefig('figures/predicted_vs_observed_frequency.png', dpi=300, bbox_inches = "tight")
+
 # Generate figure 1e
 def generate_figure_1e(test_sequences, cutsite, observed_freqs):
     pd.set_option('display.max_colwidth', 199)
@@ -119,18 +183,14 @@ def generate_figure_1e(test_sequences, cutsite, observed_freqs):
         # Add a genotype column
         pred_df = inDelphi.add_genotype_column(pred_df, stats)
 
-   
         # Set cut line and add inserted nucleotides to genotype
         pred_df = set_genotype(pred_df, stats)
 
         # Add indel column & observed frequencies
         pred_df = add_indel_column(pred_df, stats, observed_freqs)
  
-        print(pred_df.sort_values(by='Predicted frequency', ascending=False).head(6))
-        
-        pred_df = pred_df.rename(columns={'Predicted frequency': 'Pred.%'})
-      
         # Get the top 6 most frequent repair outcomes
+        pred_df = pred_df.rename(columns={'Predicted frequency': 'Pred.%'})
         sorted_df = pred_df.sort_values(by='Obs.%', ascending=False).head(6)[['Genotype', 'Cat', 'Obs.%', 'Pred.%']]
 
         # Round all columns to 1 decimal
@@ -169,7 +229,7 @@ def generate_figure_3f(test_targets):
     ax.set_ylabel('Number of gRNAs')
 
     # Save figure to output folder
-    fig.savefig("figures/figure_3f_deletions.png",dpi=300, bbox_inches = "tight")
+    fig.savefig("figures/figure_3f_deletions.png", dpi=300, bbox_inches = "tight")
 
     # kde2 = gaussian_kde(highest_ins_freq_list)
     fig2, ax2 = plt.subplots(1, 1)
@@ -181,7 +241,7 @@ def generate_figure_3f(test_targets):
     ax2.set_ylabel('Number of gRNAs')
 
     # Save figure to output folder
-    fig2.savefig("figures/figure_3f_insertions.png",dpi=300, bbox_inches = "tight")
+    fig2.savefig("figures/figure_3f_insertions.png", dpi=300, bbox_inches = "tight")
 
 
 # Find the observed frequencies for the test targets
@@ -202,7 +262,7 @@ def find_observed_freqs(test_targets):
       exp_data = data[data["Sample_Name"] == exp]
       exp_data.dropna(subset=["countEvents"], inplace=True)
 
-      # Filter the dataframe to include only deletions (below 28 not sure if we need this though) and 1bp insertions
+      # Filter the dataframe to include only deletions and 1bp insertions
       exp_data = exp_data[((exp_data["Indel"].str.startswith("1+")) & (exp_data["Type"] == "INSERTION")) | ((exp_data["Type"] == "DELETION") & (exp_data["Size"] <= 28))]
 
       # Group the data by the "Indel" column and count the number of occurrences of each unique value
@@ -233,6 +293,8 @@ if __name__ == '__main__':
     observed_freqs = find_observed_freqs(test_targets)
 
     util.ensure_dir_exists("figures/")
-    test_sequences = list(test_targets.values())[:4]
-    generate_figure_1e(test_sequences, 27, observed_freqs)
+    test_sequences = list(test_targets.values())
+
+    generate_figure_1e(test_sequences[:4], 27, observed_freqs)
     generate_figure_3f(test_targets)
+    generate_prediced_vs_observed_frequency_trend(test_sequences[:8], 27, observed_freqs)
