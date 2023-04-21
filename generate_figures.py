@@ -127,7 +127,7 @@ def generate_prediced_vs_observed_frequency_trend(test_sequences, cutsite, obser
         
         # Get the top 6 most frequent repair outcomes
         pred_df = pred_df.rename(columns={'Predicted frequency': 'Pred.%'})
-        sorted_df = pred_df.sort_values(by='Obs.%', ascending=False).head(6)[['Genotype', 'Cat', 'Obs.%', 'Pred.%']]
+        sorted_df = pred_df.sort_values(by='Obs.%', ascending=False).head(1)[['Genotype', 'Cat', 'Obs.%', 'Pred.%']]
 
         # Round all columns to 1 decimal
         sorted_df = sorted_df.round(1)
@@ -137,16 +137,16 @@ def generate_prediced_vs_observed_frequency_trend(test_sequences, cutsite, obser
 
     pd.reset_option('display.max_rows')
     total_df = pd.concat(total_df)
-    x = list(range(0, 48))
+    x = list(range(0, 50))
     y1 = total_df["Obs.%"]
     y2 = total_df["Pred.%"]
 
     plt.clf()
     plt.figure().set_figwidth(15)
-    plt.plot(x, y1, label='Observed freq.')
-    plt.plot(x, y2, label='Predicted freq.')
+    plt.plot(x, y1, label='Observed max freq.')
+    plt.plot(x, y2, label='Predicted max freq.')
 
-    plt.title('Predicted Frequency vs Observed Frequency')
+    plt.title('Predicted Max Frequency vs Observed Max Frequency')
     plt.xlabel('Target Site')
     plt.ylabel('Frequency')
     plt.legend()
@@ -297,4 +297,4 @@ if __name__ == '__main__':
 
     generate_figure_1e(test_sequences[:4], 27, observed_freqs)
     generate_figure_3f(test_targets)
-    generate_prediced_vs_observed_frequency_trend(test_sequences[:8], 27, observed_freqs)
+    generate_prediced_vs_observed_frequency_trend(test_sequences[:50], 27, observed_freqs)
