@@ -115,6 +115,7 @@ In order to reproduce the figures, run the following commands within the researc
 git checkout rq-francesco
 python francesco-rq.py
 ```
+The script will create the figures and the files reported in the paper.
 
 ### Wessel Oosterbroek
 In order to reproduce the figures in the research report, run the following command using python 3.9(+)
